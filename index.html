@@ -1,0 +1,2796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>Parañaque Voter Directory</title>
+  <!-- DNS prefetch for all external resources -->
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+  <link rel="dns-prefetch" href="https://www.gstatic.com" />
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <!-- PDF.js loaded on-demand when PDF import tab is first opened -->
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:         #f4f3ef;
+      --surface:    #ffffff;
+      --border:     #e4e2db;
+      --border2:    #d0cec6;
+      --text:       #1a1a18;
+      --muted:      #6b6960;
+      --hint:       #a09d94;
+      --accent:     #1a5cff;
+      --accent-bg:  #eef2ff;
+      --accent-muted: #6b8cff;
+      --success:    #1a7a4a;
+      --success-bg: #e6f4ec;
+      --danger:     #c0392b;
+      --danger-bg:  #fdecea;
+      --warn:       #92600a;
+      --warn-bg:    #fef3e2;
+      --radius:     10px;
+      --radius-lg:  14px;
+      --shadow:     0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+      --font:       'DM Sans', sans-serif;
+      --mono:       'DM Mono', monospace;
+      --topbar-h:   54px;
+      --bottomnav-h: 60px;
+    }
+    html, body { height: 100%; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+
+    /* ── Pages ── */
+    .page { display: none; min-height: 100vh; }
+    .page.active { display: flex; }
+
+    /* ══ LOADING ══ */
+    #loading-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 9999; flex-direction: column; gap: 12px; transition: opacity 0.3s; }
+    #loading-screen.hidden { opacity: 0; pointer-events: none; }
+    .spinner { width: 32px; height: 32px; border: 2.5px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 13px; color: var(--muted); }
+
+    /* ══ LOGIN ══ */
+    #login-page { flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; background: var(--bg); position: relative; overflow: hidden; }
+    #login-page::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(circle at 20% 30%, rgba(26,92,255,0.04) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(26,92,255,0.03) 0%, transparent 50%); pointer-events: none; }
+    .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2rem 1.75rem 1.75rem; width: 100%; max-width: 420px; box-shadow: var(--shadow); position: relative; z-index: 1; animation: slideUp 0.4s cubic-bezier(0.16,1,0.3,1); }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .login-header { display: flex; align-items: center; gap: 12px; margin-bottom: 1.75rem; }
+    .login-icon { width: 46px; height: 46px; border-radius: 12px; background: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .login-icon svg { width: 22px; height: 22px; stroke: #fff; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .login-title { font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.3; }
+    .login-subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .divider { height: 1px; background: var(--border); margin: 0 0 1.5rem; }
+    .field { margin-bottom: 1rem; }
+    .field label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.02em; }
+    .field input, .field select, .field textarea { width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius); font-family: var(--font); font-size: 15px; color: var(--text); background: var(--bg); outline: none; transition: border-color 0.15s, box-shadow 0.15s; -webkit-appearance: none; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,92,255,0.1); background: var(--surface); }
+    .field input::placeholder, .field textarea::placeholder { color: var(--hint); }
+    .field textarea { resize: vertical; min-height: 80px; }
+    .field select { padding-right: 36px; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a09d94' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+    .btn-login { width: 100%; padding: 13px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-family: var(--font); font-size: 15px; font-weight: 500; cursor: pointer; margin-top: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s, transform 0.1s; }
+    .btn-login:hover { background: #1448d0; }
+    .btn-login:active { transform: scale(0.98); }
+    .btn-login:disabled { background: var(--hint); cursor: not-allowed; }
+    .btn-login svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .error-box { display: none; background: var(--danger-bg); border: 1px solid rgba(192,57,43,0.2); border-radius: var(--radius); padding: 10px 12px; font-size: 13px; color: var(--danger); margin-top: 0.75rem; align-items: center; gap: 8px; }
+    .error-box.show { display: flex; }
+    .login-footer { text-align: center; font-size: 11px; color: var(--hint); margin-top: 1.75rem; line-height: 1.8; }
+
+    /* ══ APP SHELL ══ */
+    #app-page { flex-direction: column; }
+    .topbar { height: var(--topbar-h); background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 1rem; flex-shrink: 0; position: sticky; top: 0; z-index: 100; }
+    .topbar-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .topbar-logo-icon { width: 30px; height: 30px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .topbar-logo-icon svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .topbar-title { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; }
+    .topbar-breadcrumb { font-size: 12px; color: var(--hint); display: flex; align-items: center; gap: 4px; overflow: hidden; }
+    .topbar-sep { color: var(--border2); }
+    .topbar-bc-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+    .topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .user-pill { display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 4px; border: 1px solid var(--border); border-radius: 999px; font-size: 12px; color: var(--muted); }
+    .user-avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--success-bg); color: var(--success); font-size: 9px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .user-name { font-weight: 500; color: var(--text); }
+    .user-role { font-size: 10px; background: var(--accent-bg); color: var(--accent); padding: 2px 6px; border-radius: 999px; font-weight: 500; }
+    .user-role.admin { background: #fef3e2; color: var(--warn); }
+    .btn-logout { display: flex; align-items: center; gap: 5px; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: transparent; font-family: var(--font); font-size: 12px; color: var(--muted); cursor: pointer; transition: background 0.15s, color 0.15s; white-space: nowrap; }
+    .btn-logout:hover { background: var(--bg); color: var(--text); }
+    .btn-logout svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .app-body { display: flex; flex: 1; overflow: hidden; height: calc(100vh - var(--topbar-h)); }
+
+    /* ══ SIDEBAR (desktop) ══ */
+    .sidebar { width: 230px; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; flex-shrink: 0; padding: 1rem 0; transition: transform 0.25s; }
+    .sidebar-section { margin-bottom: 1.5rem; }
+    .sidebar-label { font-size: 10px; font-weight: 600; color: var(--hint); letter-spacing: 0.08em; text-transform: uppercase; padding: 0 1rem; margin-bottom: 6px; }
+    .sidebar-item { display: flex; align-items: center; gap: 9px; padding: 8px 1rem; font-size: 13px; color: var(--muted); cursor: pointer; transition: background 0.1s, color 0.1s; margin: 0 8px; border-radius: 8px; }
+    .sidebar-item:hover { background: var(--bg); color: var(--text); }
+    .sidebar-item.active { background: var(--accent-bg); color: var(--accent); font-weight: 500; }
+    .sidebar-item svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .sidebar-badge { margin-left: auto; font-size: 10px; background: var(--bg); border-radius: 999px; padding: 2px 7px; color: var(--hint); font-weight: 500; }
+    .sidebar-item.active .sidebar-badge { background: rgba(26,92,255,0.15); color: var(--accent-muted); }
+
+    /* Mobile sidebar overlay */
+    .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 150; }
+    .sidebar-overlay.open { display: block; }
+    .sidebar-drawer { position: fixed; left: 0; top: var(--topbar-h); bottom: 0; width: 260px; background: var(--surface); z-index: 160; transform: translateX(-100%); transition: transform 0.25s cubic-bezier(0.16,1,0.3,1); overflow-y: auto; padding: 1rem 0 5rem; box-shadow: 4px 0 20px rgba(0,0,0,0.1); }
+    .sidebar-drawer.open { transform: translateX(0); }
+    .btn-menu { display: none; width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 8px; background: none; cursor: pointer; align-items: center; justify-content: center; flex-shrink: 0; }
+    .btn-menu svg { width: 18px; height: 18px; stroke: var(--muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ══ CONTENT ══ */
+    .content { flex: 1; overflow-y: auto; padding: 1.25rem; background: var(--bg); }
+    .content-header { margin-bottom: 1.25rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+    .content-header-left .content-title { font-size: 19px; font-weight: 600; color: var(--text); }
+    .content-header-left .content-desc { font-size: 13px; color: var(--muted); margin-top: 3px; }
+    .content-header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .section-view { display: none; }
+    .section-view.active { display: block; }
+
+    /* ══ BUTTONS ══ */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: var(--radius); border: 1px solid var(--border); font-family: var(--font); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+    .btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .btn-secondary { background: var(--surface); color: var(--muted); }
+    .btn-secondary:hover { background: var(--bg); color: var(--text); }
+    .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-primary:hover { background: #1448d0; }
+    .btn-primary:disabled { background: var(--hint); border-color: var(--hint); cursor: not-allowed; }
+    .btn-danger { background: var(--danger-bg); color: var(--danger); border-color: rgba(192,57,43,0.2); }
+    .btn-danger:hover { background: #f9d5d2; }
+    .btn-success { background: var(--success-bg); color: var(--success); border-color: rgba(26,122,74,0.2); }
+    .btn-success:hover { background: #d0eeda; }
+
+    /* ══ STATS ══ */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+    @media (min-width: 900px) { .stats-grid { grid-template-columns: repeat(5, 1fr); } }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; transition: box-shadow 0.15s; }
+    .stat-card.clickable { cursor: pointer; }
+    .stat-card.clickable:hover { box-shadow: var(--shadow); border-color: var(--border2); }
+    .stat-card.warn-card { border-left: 3px solid var(--warn); }
+    .stat-card.warn-card .stat-value { color: var(--warn); }
+    .stat-card.warn-card .stat-label { color: var(--warn); }
+    .missing-badge { display: inline-block; font-size: 9px; font-weight: 700; padding: 2px 5px; border-radius: 4px; background: var(--warn-bg); color: var(--warn); letter-spacing: 0.04em; margin-left: 4px; vertical-align: middle; }
+    .voter-row.missing-info { border-left: 2px solid var(--warn); }
+    .stat-label { font-size: 11px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+    .stat-value { font-size: 24px; font-weight: 600; color: var(--text); line-height: 1; font-variant-numeric: tabular-nums; }
+    .stat-sub { font-size: 11px; color: var(--hint); margin-top: 4px; }
+
+    /* ══ TOOLBAR ══ */
+    .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+    .search-wrap { position: relative; flex: 1; min-width: 180px; }
+    .search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; stroke: var(--hint); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+    .search-wrap input { width: 100%; padding: 10px 12px 10px 36px; border: 1px solid var(--border); border-radius: var(--radius); font-family: var(--font); font-size: 14px; color: var(--text); background: var(--surface); outline: none; transition: border-color 0.15s, box-shadow 0.15s; -webkit-appearance: none; }
+    .search-wrap input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,92,255,0.1); }
+    .search-wrap input::placeholder { color: var(--hint); }
+    select { padding: 10px 32px 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-family: var(--font); font-size: 13px; color: var(--text); background: var(--surface); outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a09d94' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; transition: border-color 0.15s; }
+    select:focus { border-color: var(--accent); outline: none; }
+
+    /* ══ TABLE ══ */
+    .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .table-head { display: grid; grid-template-columns: 52px 1.4fr 1fr 110px 100px 90px 80px; padding: 10px 16px; background: var(--bg); border-bottom: 1px solid var(--border); gap: 8px; }
+    .th { font-size: 10px; font-weight: 600; color: var(--hint); text-transform: uppercase; letter-spacing: 0.07em; }
+    .voter-row { display: grid; grid-template-columns: 52px 1.4fr 1fr 110px 100px 90px 80px; padding: 12px 16px; border-bottom: 1px solid var(--border); gap: 8px; align-items: center; cursor: pointer; transition: background 0.1s; -webkit-tap-highlight-color: transparent; }
+    .voter-row:last-child { border-bottom: none; }
+    .voter-row:hover { background: #fafaf8; }
+    .voter-row:active { background: var(--accent-bg); }
+    .voter-num { font-size: 12px; color: var(--hint); font-variant-numeric: tabular-nums; font-family: var(--mono); }
+    .voter-name { font-size: 13px; font-weight: 500; color: var(--text); }
+    .voter-addr { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .voter-phone { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+    .voter-precinct { font-size: 12px; color: var(--accent); font-family: var(--mono); font-weight: 500; }
+    .voter-barangay { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .voter-action { display: flex; justify-content: flex-end; }
+    .btn-view { font-size: 11px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; background: none; color: var(--muted); cursor: pointer; font-family: var(--font); transition: all 0.1s; }
+    .btn-view:hover { background: var(--accent-bg); color: var(--accent); border-color: var(--accent-muted); }
+    .loading-row { padding: 2rem; text-align: center; color: var(--hint); font-size: 13px; }
+    .empty-row { padding: 3rem; text-align: center; color: var(--hint); font-size: 13px; }
+
+    /* Mobile voter card list (replaces table on small screens) */
+    .voter-card-list { display: none; }
+    .voter-card { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 16px; cursor: pointer; transition: background 0.1s; -webkit-tap-highlight-color: transparent; display: flex; align-items: center; gap: 12px; }
+    .voter-card:active { background: var(--accent-bg); }
+    .voter-card-avatar { width: 38px; height: 38px; border-radius: 10px; background: var(--accent-bg); color: var(--accent); font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: var(--mono); }
+    .voter-card-body { flex: 1; min-width: 0; }
+    .voter-card-name { font-size: 14px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .voter-card-meta { font-size: 12px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .voter-card-tags { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+    .voter-card-tag { font-size: 10px; padding: 2px 7px; border-radius: 999px; background: var(--bg); color: var(--muted); font-weight: 500; }
+    .voter-card-tag.accent { background: var(--accent-bg); color: var(--accent); }
+    .voter-card-chevron { color: var(--hint); flex-shrink: 0; }
+    .voter-card-chevron svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ══ PAGINATION ══ */
+    .pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--bg); flex-wrap: wrap; gap: 8px; }
+    .page-info { font-size: 12px; color: var(--hint); }
+    .page-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+    .btn-page { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); font-family: var(--font); font-size: 12px; color: var(--muted); cursor: pointer; transition: all 0.1s; min-width: 36px; text-align: center; }
+    .btn-page:hover { background: var(--bg); color: var(--text); }
+    .btn-page.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-page:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ══ MODAL ══ */
+    .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(2px); z-index: 200; align-items: flex-end; justify-content: center; padding: 0; }
+    .modal-backdrop.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg) var(--radius-lg) 0 0; width: 100%; max-width: 100%; max-height: 92vh; overflow-y: auto; box-shadow: 0 -4px 40px rgba(0,0,0,0.15); animation: modalUp 0.3s cubic-bezier(0.16,1,0.3,1); }
+    @keyframes modalUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .modal-handle { width: 36px; height: 4px; background: var(--border2); border-radius: 99px; margin: 12px auto 0; }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem 0.75rem; border-bottom: 1px solid var(--border); }
+    .modal-voter-id { font-size: 10px; color: var(--hint); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; font-family: var(--mono); }
+    .modal-name { font-size: 17px; font-weight: 600; color: var(--text); }
+    .modal-close { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 8px; background: none; cursor: pointer; color: var(--muted); flex-shrink: 0; transition: background 0.1s; }
+    .modal-close:hover { background: var(--bg); }
+    .modal-close svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .modal-tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 1.25rem; gap: 0; overflow-x: auto; }
+    .modal-tab { padding: 10px 16px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; border: none; background: none; font-family: var(--font); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; transition: color 0.15s; }
+    .modal-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .modal-body { padding: 1.25rem; }
+    .modal-field { display: flex; gap: 10px; margin-bottom: 14px; }
+    .modal-field-icon { width: 20px; flex-shrink: 0; padding-top: 1px; }
+    .modal-field-icon svg { width: 14px; height: 14px; stroke: var(--hint); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .modal-key { font-size: 10px; color: var(--hint); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-bottom: 2px; }
+    .modal-val { font-size: 14px; color: var(--text); font-weight: 500; }
+    .modal-val.mono { font-family: var(--mono); }
+    .modal-actions { display: flex; gap: 8px; padding: 1rem 1.25rem; border-top: 1px solid var(--border); flex-wrap: wrap; }
+    .modal-actions .btn { flex: 1; min-width: 100px; justify-content: center; }
+
+    /* ══ FORMS ══ */
+    .register-card, .bulk-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; }
+    .register-section-title { font-size: 11px; font-weight: 600; color: var(--hint); text-transform: uppercase; letter-spacing: 0.08em; margin: 1.25rem 0 0.75rem; }
+    .register-section-title:first-child { margin-top: 0; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .form-grid .full { grid-column: 1 / -1; }
+    .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border); flex-wrap: wrap; }
+    .form-actions .btn { min-width: 120px; justify-content: center; }
+
+    /* Panel tabs */
+    .panel-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1rem; background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; border: 1px solid var(--border); border-bottom: none; overflow-x: auto; }
+    .panel-tab { flex: 1; padding: 11px 14px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; border: none; background: none; font-family: var(--font); border-bottom: 2px solid transparent; white-space: nowrap; transition: color 0.15s; text-align: center; }
+    .panel-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* Bulk import */
+    .bulk-steps { display: flex; gap: 1rem; margin-bottom: 1.25rem; }
+    .bulk-step { flex: 1; background: var(--bg); border-radius: var(--radius); padding: 12px 14px; }
+    .bulk-step-num { font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+    .bulk-step-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .bulk-step-desc { font-size: 12px; color: var(--muted); }
+    .csv-template { font-family: var(--mono); font-size: 11px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 1rem; color: var(--muted); overflow-x: auto; white-space: nowrap; }
+    .csv-area { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-family: var(--mono); font-size: 12px; color: var(--text); background: var(--bg); min-height: 120px; outline: none; resize: vertical; -webkit-appearance: none; }
+    .csv-area:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,92,255,0.1); }
+    .preview-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .preview-table th { padding: 8px 10px; background: var(--bg); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--hint); text-align: left; }
+    .preview-table td { padding: 8px 10px; border-top: 1px solid var(--border); color: var(--text); }
+    .preview-table tr.err td { background: var(--danger-bg); }
+    .bulk-preview { margin-top: 1rem; }
+    .bulk-preview-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 0.75rem; }
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 600; }
+    .badge-ok { background: var(--success-bg); color: var(--success); }
+    .badge-err { background: var(--danger-bg); color: var(--danger); }
+    .badge-warn { background: var(--warn-bg); color: var(--warn); }
+
+    /* Aid list items */
+    .aid-empty { font-size: 13px; color: var(--hint); padding: 8px 0; }
+    .aid-item { display: flex; align-items: center; gap: 10px; background: var(--bg); border-radius: var(--radius); padding: 8px 12px; font-size: 13px; }
+    .aid-item-name { font-weight: 500; color: var(--text); }
+    .aid-item-date { font-size: 11px; color: var(--hint); margin-top: 2px; }
+    .aid-item-remove { background: none; border: none; cursor: pointer; color: var(--hint); padding: 2px; display: flex; flex-shrink: 0; margin-left: auto; }
+    .aid-item-remove:hover { color: var(--danger); }
+    .aid-item-remove svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+
+    /* Team */
+    .team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+    .team-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; }
+    .team-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .team-avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+    .team-avatar.admin { background: #fef3e2; color: var(--warn); }
+    .team-avatar.official { background: var(--accent-bg); color: var(--accent); }
+    .team-info-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .team-info-email { font-size: 11px; color: var(--hint); }
+    .team-meta { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+    .team-meta-row { display: flex; gap: 6px; align-items: center; }
+    .team-meta-row svg { width: 12px; height: 12px; stroke: var(--hint); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .team-card-actions { display: flex; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+    /* PDF import */
+    .pdf-dropzone { border: 2px dashed var(--border2); border-radius: var(--radius-lg); padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--bg); position: relative; }
+    .pdf-dropzone:hover, .pdf-dropzone.drag-over { border-color: var(--accent); background: var(--accent-bg); }
+    .pdf-dropzone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .pdf-dropzone-icon { width: 48px; height: 48px; background: var(--accent-bg); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
+    .pdf-dropzone-icon svg { width: 24px; height: 24px; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .pdf-dropzone-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .pdf-dropzone-sub { font-size: 13px; color: var(--muted); }
+    .pdf-dropzone-hint { font-size: 11px; color: var(--hint); margin-top: 8px; }
+    .pdf-queue { margin-top: 1rem; display: flex; flex-direction: column; gap: 8px; }
+    .pdf-queue-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+    .pdf-queue-icon { width: 36px; height: 36px; background: var(--danger-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .pdf-queue-icon svg { width: 18px; height: 18px; stroke: var(--danger); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .pdf-queue-info { flex: 1; min-width: 0; }
+    .pdf-queue-name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pdf-queue-meta { font-size: 11px; color: var(--hint); margin-top: 2px; }
+    .pdf-queue-remove { background: none; border: none; cursor: pointer; color: var(--hint); padding: 4px; display: flex; align-items: center; }
+    .pdf-queue-remove:hover { color: var(--danger); }
+    .pdf-queue-remove svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+    .import-progress { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; margin-top: 1rem; display: none; }
+    .import-progress.show { display: block; }
+    .progress-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 1rem; }
+    .progress-file { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+    .progress-file:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .progress-file-name { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .progress-bar-wrap { height: 6px; background: var(--bg); border-radius: 99px; overflow: hidden; margin-bottom: 4px; }
+    .progress-bar { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.3s; width: 0%; }
+    .progress-bar.done { background: var(--success); }
+    .progress-bar.error { background: var(--danger); }
+    .progress-status { font-size: 11px; color: var(--hint); }
+
+    /* Alerts */
+    .alert { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 1rem; }
+    .alert svg { width: 15px; height: 15px; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; margin-top: 1px; }
+    .alert-success { background: var(--success-bg); color: var(--success); border: 1px solid rgba(26,122,74,0.2); }
+    .alert-success svg { stroke: var(--success); }
+    .alert-warn { background: var(--warn-bg); color: var(--warn); border: 1px solid rgba(146,96,10,0.2); }
+    .alert-warn svg { stroke: var(--warn); }
+    .alert-info { background: var(--accent-bg); color: var(--accent); border: 1px solid rgba(26,92,255,0.2); }
+    .alert-info svg { stroke: var(--accent); }
+
+    /* Aid */
+    .aid-list { display: flex; flex-direction: column; gap: 6px; }
+    .aid-entry { display: flex; align-items: center; gap: 10px; background: var(--bg); border-radius: var(--radius); padding: 8px 12px; font-size: 13px; }
+    .aid-entry-name { flex: 1; font-weight: 500; }
+    .aid-entry-meta { font-size: 11px; color: var(--hint); }
+    .aid-entry-del { background: none; border: none; cursor: pointer; color: var(--hint); padding: 2px; display: flex; }
+    .aid-entry-del:hover { color: var(--danger); }
+    .aid-entry-del svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+    .aid-add-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    /* Toast */
+    .toast-container { position: fixed; bottom: calc(var(--bottomnav-h) + 1rem); right: 1rem; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+    .toast { background: var(--text); color: #fff; padding: 10px 14px; border-radius: var(--radius); font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); animation: toastIn 0.3s cubic-bezier(0.16,1,0.3,1); max-width: 300px; pointer-events: all; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--danger); }
+    .toast.warn { background: var(--warn); }
+    .toast svg { width: 15px; height: 15px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+    /* ══ BOTTOM NAV (mobile only) ══ */
+    .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: var(--bottomnav-h); background: var(--surface); border-top: 1px solid var(--border); z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+    .bottom-nav-inner { display: flex; height: 100%; }
+    .bottom-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; color: var(--hint); transition: color 0.15s; -webkit-tap-highlight-color: transparent; padding: 6px 4px; }
+    .bottom-nav-item.active { color: var(--accent); }
+    .bottom-nav-item svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .bottom-nav-item span { font-size: 10px; font-weight: 500; }
+
+    /* ══ INLINE EDIT VOTER FIELDS ══ */
+    .inline-field { margin-bottom: 10px; }
+    .inline-label { font-size: 10px; color: var(--hint); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
+    .inline-label svg { width: 11px; height: 11px; stroke: var(--hint); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .inline-val { font-size: 14px; color: var(--text); font-weight: 500; min-height: 22px; }
+    .inline-val.mono { font-family: var(--mono); }
+    .inline-val.empty { color: var(--hint); font-weight: 400; }
+    .inline-input { width: 100%; padding: 8px 11px; border: 1.5px solid var(--accent); border-radius: var(--radius); font-family: var(--font); font-size: 14px; color: var(--text); background: var(--accent-bg); outline: none; transition: box-shadow 0.15s; display: none; -webkit-appearance: none; }
+    .inline-input:focus { box-shadow: 0 0 0 3px rgba(26,92,255,0.12); }
+    .inline-select { width: 100%; padding: 8px 32px 8px 11px; border: 1.5px solid var(--accent); border-radius: var(--radius); font-family: var(--font); font-size: 14px; color: var(--text); background: var(--accent-bg); outline: none; display: none; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a09d94' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+    .edit-mode .inline-val { display: none; }
+    .edit-mode .inline-input,
+    .edit-mode .inline-select { display: block; }
+    .inline-section-title { font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; padding: 4px 0 8px; margin-top: 10px; border-top: 1px solid var(--border); }
+    .inline-section-title:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+    .inline-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
+    .inline-grid .full { grid-column: 1 / -1; }
+    .edit-mode-hint { font-size: 11px; color: var(--warn); background: var(--warn-bg); border-radius: var(--radius); padding: 6px 10px; margin-bottom: 10px; display: none; align-items: center; gap: 6px; }
+    .edit-mode-hint svg { width: 13px; height: 13px; stroke: var(--warn); fill: none; stroke-width: 2; flex-shrink: 0; }
+    .edit-mode .edit-mode-hint { display: flex; }
+
+    /* ══ ROLE CARDS ══ */
+    .role-card { flex: 1; min-width: 130px; border: 1.5px solid var(--border); border-radius: var(--radius); padding: 12px 14px; cursor: pointer; transition: all 0.15s; background: var(--bg); }
+    .role-card-active { border-color: var(--accent); background: var(--accent-bg); }
+    .role-card-top { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .role-card-active .role-card-top { color: var(--accent); }
+    .role-card-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+    .role-card-active .role-card-desc { color: var(--accent-muted); }
+
+    /* ══ PERMISSIONS GRID ══ */
+    .perm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .perm-item { display: flex; align-items: flex-start; gap: 10px; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; cursor: pointer; transition: border-color 0.15s, background 0.15s; background: var(--bg); }
+    .perm-item:has(input:checked) { border-color: var(--accent); background: var(--accent-bg); }
+    .perm-item input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; margin-top: 2px; }
+    .perm-item-body { flex: 1; min-width: 0; }
+    .perm-item-title { font-size: 12px; font-weight: 600; color: var(--text); }
+    .perm-item:has(input:checked) .perm-item-title { color: var(--accent); }
+    .perm-item-desc { font-size: 11px; color: var(--hint); margin-top: 2px; line-height: 1.3; }
+    @media (max-width: 480px) { .perm-grid { grid-template-columns: 1fr; } .inline-grid { grid-template-columns: 1fr; } }
+
+    /* ══ BREAKPOINTS ══ */
+
+    /* Tablet: ≤900px */
+    @media (max-width: 900px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .table-head, .voter-row { grid-template-columns: 40px 1.2fr 100px 80px 70px; }
+      .voter-addr, .voter-phone { display: none; }
+      .user-name { display: none; }
+    }
+
+    /* Mobile: ≤768px */
+    @media (max-width: 768px) {
+      :root { --bottomnav-h: 60px; }
+      .sidebar { display: none; }
+      .btn-menu { display: flex; }
+      .bottom-nav { display: block; }
+      .content { padding-bottom: calc(var(--bottomnav-h) + 1rem); padding: 1rem 1rem calc(var(--bottomnav-h) + 1rem); }
+      .app-body { height: calc(100vh - var(--topbar-h)); }
+      .form-grid { grid-template-columns: 1fr; }
+      .team-grid { grid-template-columns: 1fr; }
+      .user-role { display: none; }
+      .user-pill { border: none; padding: 0; gap: 0; }
+      .toast-container { left: 1rem; right: 1rem; bottom: calc(var(--bottomnav-h) + 0.5rem); }
+      .toast { max-width: 100%; }
+      /* Show card list, hide desktop table */
+      .table-head { display: none; }
+      .voter-row { display: none; }
+      .voter-card-list { display: block; }
+      .bulk-steps { flex-direction: column; }
+      /* Modal becomes full bottom sheet */
+      .modal-backdrop { align-items: flex-end; }
+      .modal { max-height: 88vh; border-radius: 20px 20px 0 0; }
+      .modal-actions .btn { padding: 12px; }
+      /* Content header stacks */
+      .content-header { flex-direction: column; gap: 0.75rem; }
+      .content-header-actions { width: 100%; }
+      .content-header-actions .btn { flex: 1; justify-content: center; }
+      .topbar-breadcrumb { display: none; }
+    }
+
+    /* Small mobile: ≤480px */
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .register-card, .bulk-card { padding: 1rem; }
+      .content-title { font-size: 17px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading-screen"><div class="spinner"></div><div class="loading-text">Loading…</div></div>
+
+<!-- ═══ LOGIN PAGE ═══ -->
+<div id="login-page" class="page active">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-icon">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
+      <div>
+        <div class="login-title">Parañaque Voter Directory</div>
+        <div class="login-subtitle">City of Parañaque · Barangay Officials Portal</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="field"><label for="email">Email address</label><input type="email" id="email" placeholder="e.g. admin@paranaque.gov.ph" autocomplete="username" inputmode="email" /></div>
+    <div class="field"><label for="password">Password</label><input type="password" id="password" placeholder="Enter your password" autocomplete="current-password" /></div>
+    <div class="error-box" id="error-box">
+      <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:var(--danger);fill:none;stroke-width:2;stroke-linecap:round;flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="error-text">Invalid credentials.</span>
+    </div>
+    <button class="btn-login" id="login-btn" onclick="handleLogin()">
+      <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+      Sign in
+    </button>
+    <div class="login-footer">Commission on Elections · Parañaque City<br>Secure access — authorized personnel only</div>
+  </div>
+</div>
+
+<!-- ═══ APP PAGE ═══ -->
+<div id="app-page" class="page">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="btn-menu" id="btn-menu" onclick="toggleSidebar()">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-logo-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+      <span class="topbar-title">Voter Directory</span>
+      <div class="topbar-breadcrumb"><span class="topbar-sep">/</span><span id="topbar-barangay" class="topbar-bc-text">All Barangays</span></div>
+    </div>
+    <div class="topbar-right">
+      <div class="user-pill">
+        <div class="user-avatar" id="user-avatar">AD</div>
+        <span class="user-name" id="user-name">Admin</span>
+        <span class="user-role" id="user-role-badge">Official</span>
+      </div>
+      <button class="btn-logout" onclick="handleLogout()">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span>Sign out</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile sidebar overlay + drawer -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+  <div class="sidebar-drawer" id="sidebar-drawer">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Directory</div>
+      <div class="sidebar-item active" id="drawer-nav-voters" onclick="showSection('voters'); closeSidebar();">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        All voters <span class="sidebar-badge" id="drawer-sb-total">—</span>
+      </div>
+    </div>
+    <div class="sidebar-section" id="drawer-sb-barangay-section">
+      <div class="sidebar-label">Barangays</div>
+      <div id="drawer-sb-barangay-list"></div>
+    </div>
+    <div class="sidebar-section" id="drawer-sb-admin-section" style="display:none">
+      <div class="sidebar-label">Management</div>
+      <div class="sidebar-item" id="drawer-nav-register" onclick="showSection('register'); closeSidebar();">
+        <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+        Register Voters
+      </div>
+      <div class="sidebar-item" id="drawer-nav-team" onclick="showSection('team'); closeSidebar();">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Team Members <span class="sidebar-badge" id="drawer-sb-team">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-body">
+    <!-- Desktop Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Directory</div>
+        <div class="sidebar-item active" id="nav-voters" onclick="showSection('voters')">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          All voters
+          <span class="sidebar-badge" id="sb-total">—</span>
+        </div>
+      </div>
+      <div class="sidebar-section" id="sb-barangay-section">
+        <div class="sidebar-label">Barangays</div>
+        <div id="sb-barangay-list"></div>
+      </div>
+      <div class="sidebar-section" id="sb-admin-section" style="display:none">
+        <div class="sidebar-label">Management</div>
+        <div class="sidebar-item" id="nav-register" onclick="showSection('register')">
+          <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          Register Voters
+        </div>
+        <div class="sidebar-item" id="nav-team" onclick="showSection('team')">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Team Members
+          <span class="sidebar-badge" id="sb-team">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- ── VOTERS SECTION ── -->
+      <div class="section-view active" id="section-voters">
+        <div class="content-header">
+          <div class="content-header-left">
+            <div class="content-title" id="view-title">Voter Records</div>
+            <div class="content-desc" id="view-desc">Parañaque City · All Barangays</div>
+          </div>
+          <div class="content-header-actions" id="admin-toolbar-btns" style="display:none">
+            <button class="btn btn-primary" onclick="showSection('register')">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Voters
+            </button>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">Total voters</div><div class="stat-value" id="stat-total">—</div><div class="stat-sub">in database</div></div>
+          <div class="stat-card"><div class="stat-label">Barangays</div><div class="stat-value" id="stat-barangays">—</div><div class="stat-sub">covered</div></div>
+          <div class="stat-card"><div class="stat-label">Precincts</div><div class="stat-value" id="stat-precincts">—</div><div class="stat-sub">total precincts</div></div>
+          <div class="stat-card"><div class="stat-label">Results</div><div class="stat-value" id="stat-results">—</div><div class="stat-sub">matching search</div></div>
+          <div class="stat-card warn-card clickable" title="Click to filter voters with no phone" onclick="filterMissing('phone')"><div class="stat-label">📵 No Phone</div><div class="stat-value" id="stat-no-phone">—</div><div class="stat-sub">need to collect</div></div>
+        </div>
+        <div class="toolbar">
+          <div class="search-wrap">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" id="search-input" placeholder="Search name, address, phone…" oninput="handleSearch()" autocomplete="off" />
+          </div>
+          <select id="barangay-filter" onchange="handleSearch()"><option value="">All barangays</option></select>
+          <select id="precinct-filter" onchange="handleSearch()"><option value="">All precincts</option></select>
+          <select id="team-filter" onchange="handleSearch()"><option value="">All teams</option></select>
+          <select id="missing-filter" onchange="handleSearch()">
+            <option value="">All records</option>
+            <option value="phone">📵 Missing phone</option>
+          </select>
+        </div>
+        <div class="table-card">
+          <!-- Desktop table -->
+          <div class="table-head">
+            <div class="th">No.</div>
+            <div class="th">Full name</div>
+            <div class="th">Address</div>
+            <div class="th">Phone</div>
+            <div class="th">Barangay</div>
+            <div class="th">Precinct</div>
+            <div class="th"></div>
+          </div>
+          <div id="voter-list"><div class="loading-row">Loading voter records…</div></div>
+          <!-- Mobile card list -->
+          <div class="voter-card-list" id="voter-card-list"></div>
+          <div class="pagination" id="pagination" style="display:none">
+            <div class="page-info" id="page-info">Showing 1–50</div>
+            <div class="page-btns" id="page-btns"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── REGISTER SECTION ── -->
+      <div class="section-view" id="section-register">
+        <div class="content-header">
+          <div class="content-header-left">
+            <div class="content-title">Register Voters</div>
+            <div class="content-desc">Add individual voters or bulk import from CSV / PDF</div>
+          </div>
+        </div>
+        <div class="panel-tabs">
+          <button class="panel-tab active" onclick="switchTab('single')">Single</button>
+          <button class="panel-tab" onclick="switchTab('bulk')">Bulk CSV</button>
+          <button class="panel-tab" onclick="switchTab('pdf')">📄 PDF Import</button>
+        </div>
+        <!-- Single registration -->
+        <div class="tab-pane active" id="tab-single">
+          <div class="register-card">
+            <div class="register-section-title">Personal Information</div>
+            <div class="form-grid">
+              <div class="field"><label>Last Name *</label><input type="text" id="f-lastname" placeholder="e.g. DELA CRUZ" autocapitalize="characters" /></div>
+              <div class="field"><label>First Name *</label><input type="text" id="f-firstname" placeholder="e.g. JUAN" autocapitalize="characters" /></div>
+              <div class="field"><label>Middle Name</label><input type="text" id="f-middlename" placeholder="e.g. SANTOS" autocapitalize="characters" /></div>
+              <div class="field"><label>Suffix</label><input type="text" id="f-suffix" placeholder="e.g. JR., SR., III" autocapitalize="characters" /></div>
+              <div class="field"><label>Birthday</label><input type="date" id="f-birthday" /></div>
+              <div class="field"><label>Civil Status</label>
+                <select id="f-civil">
+                  <option value="">Select…</option>
+                  <option>Single</option><option>Married</option><option>Widowed</option><option>Separated</option><option>Annulled</option>
+                </select>
+              </div>
+            </div>
+            <div class="register-section-title">Contact & Location</div>
+            <div class="form-grid">
+              <div class="field"><label>Phone Number</label><input type="tel" id="f-phone" placeholder="e.g. 09171234567" inputmode="tel" /></div>
+              <div class="field"><label>Secondary Phone</label><input type="tel" id="f-phone2" placeholder="e.g. 09181234567" inputmode="tel" /></div>
+              <div class="field full"><label>Registered Address *</label><input type="text" id="f-address" placeholder="e.g. BLK 5 LOT 8 BAYABAS ST." autocapitalize="characters" /></div>
+              <div class="field"><label>Barangay *</label><input type="text" id="f-barangay" placeholder="e.g. BF Homes" /></div>
+              <div class="field"><label>Precinct *</label><input type="text" id="f-precinct" placeholder="e.g. 0470A" autocapitalize="characters" /></div>
+            </div>
+            <div class="register-section-title">Voter Details</div>
+            <div class="form-grid">
+              <div class="field"><label>PCVL / Voter ID No.</label><input type="text" id="f-voterid" placeholder="e.g. 1234567" inputmode="numeric" /></div>
+              <div class="field"><label>Assigned Team / Leader</label><input type="text" id="f-team" placeholder="e.g. Team Dela Cruz" /></div>
+              <div class="field full"><label>Notes / Remarks</label><textarea id="f-notes" placeholder="Any additional notes…"></textarea></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-secondary" onclick="clearSingleForm()">Clear</button>
+              <button class="btn btn-primary" id="btn-save-voter" onclick="saveSingleVoter()">
+                <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Voter
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Bulk import -->
+        <div class="tab-pane" id="tab-bulk">
+          <div class="bulk-card">
+            <div class="bulk-steps">
+              <div class="bulk-step"><div class="bulk-step-num">Step 1</div><div class="bulk-step-title">Copy your data</div><div class="bulk-step-desc">From Excel or any spreadsheet app, copy the rows (no header needed)</div></div>
+              <div class="bulk-step"><div class="bulk-step-num">Step 2</div><div class="bulk-step-title">Paste below</div><div class="bulk-step-desc">Tab-separated or comma-separated values are both supported</div></div>
+              <div class="bulk-step"><div class="bulk-step-num">Step 3</div><div class="bulk-step-title">Review & import</div><div class="bulk-step-desc">Check the preview, then click Import All Valid Rows</div></div>
+            </div>
+            <div class="register-section-title">Column Order</div>
+            <div class="csv-template">lastname | firstname | middlename | suffix | birthday (YYYY-MM-DD) | civil_status | phone | phone2 | address | barangay | precinct | voter_id | team | notes</div>
+            <div class="alert alert-info">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>Only <strong>lastname, firstname, address, barangay, and precinct</strong> are required.</span>
+            </div>
+            <div class="field"><label>Paste data here</label><textarea class="csv-area" id="bulk-input" placeholder="DELA CRUZ&#9;JUAN&#9;SANTOS&#9;&#9;1985-03-15&#9;Married&#9;09171234567&#9;&#9;BLK 5 LOT 8 BAYABAS ST&#9;BF Homes&#9;0470A&#9;&#9;Team A&#9;" oninput="parseBulkPreview()"></textarea></div>
+            <div id="bulk-preview-area"></div>
+            <div class="form-actions">
+              <button class="btn btn-secondary" onclick="document.getElementById('bulk-input').value=''; document.getElementById('bulk-preview-area').innerHTML='';">Clear</button>
+              <button class="btn btn-primary" id="btn-bulk-import" onclick="bulkImport()" disabled>
+                <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                Import All Valid Rows
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- PDF import -->
+        <div class="tab-pane" id="tab-pdf">
+          <div class="bulk-card">
+            <div class="alert alert-info">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>Upload any <strong>COMELEC PCVL PDF</strong>. The app will automatically extract Precinct, Voter No., Name, and Address from every page.</span>
+            </div>
+            <div class="pdf-dropzone" id="pdf-dropzone">
+              <input type="file" id="pdf-file-input" accept=".pdf" multiple onchange="handlePdfFiles(this.files)" />
+              <div class="pdf-dropzone-icon">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+              </div>
+              <div class="pdf-dropzone-title">Drop PCVL PDF files here</div>
+              <div class="pdf-dropzone-sub">or tap to browse</div>
+              <div class="pdf-dropzone-hint">Supports multiple PDFs · COMELEC JasperReports format</div>
+            </div>
+            <div class="pdf-queue" id="pdf-queue"></div>
+            <div id="pdf-preview-area"></div>
+            <div class="import-progress" id="pdf-import-progress">
+              <div class="progress-title" id="pdf-progress-title">Parsing PDF…</div>
+              <div id="pdf-progress-files"></div>
+            </div>
+            <div class="alert alert-warn" id="quota-warn" style="display:none">
+              <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span><strong>Firestore limit hit (20,000 writes/day).</strong> Save your parsed data as JSON, then resume tomorrow.</span>
+            </div>
+            <div class="alert alert-info" style="margin-bottom:0.5rem">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>Have a saved <code>.json</code> from a previous session? <label style="color:var(--accent);cursor:pointer;font-weight:600">Load it here<input type="file" id="json-resume-input" accept=".json" style="display:none" onchange="loadResumeJson(this)"/></label></span>
+            </div>
+            <div class="form-actions" id="pdf-form-actions" style="display:none">
+              <button class="btn btn-secondary" onclick="clearPdfImport()">Clear</button>
+              <button class="btn btn-secondary" id="btn-save-json" onclick="saveAsJson()">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Save as JSON
+              </button>
+              <button class="btn btn-primary" id="btn-pdf-import" onclick="doPdfImport()">
+                <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                Import All Records
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TEAM SECTION ── -->
+      <div class="section-view" id="section-team">
+        <div class="content-header">
+          <div class="content-header-left">
+            <div class="content-title">Team Members</div>
+            <div class="content-desc">Manage staff accounts who have access to the directory</div>
+          </div>
+          <div class="content-header-actions">
+            <button class="btn btn-primary" onclick="openAddTeamModal()">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Team Member
+            </button>
+          </div>
+        </div>
+        <div class="team-grid" id="team-grid"><div class="loading-row">Loading team members…</div></div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /app-body -->
+
+  <!-- ══ BOTTOM NAV ══ -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <div class="bottom-nav-inner">
+      <div class="bottom-nav-item active" id="bnav-voters" onclick="showSection('voters')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Voters</span>
+      </div>
+      <div class="bottom-nav-item" id="bnav-register" onclick="showSection('register')" style="display:none">
+        <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+        <span>Register</span>
+      </div>
+      <div class="bottom-nav-item" id="bnav-team" onclick="showSection('team')" style="display:none">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Team</span>
+      </div>
+      <div class="bottom-nav-item" id="bnav-menu" onclick="toggleSidebar()">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+        <span>More</span>
+      </div>
+    </div>
+  </nav>
+
+</div><!-- /app-page -->
+
+<!-- ══ VOTER DETAIL MODAL ══ -->
+<div class="modal-backdrop" id="voter-modal" onclick="if(event.target===this)closeVoterModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div>
+        <div class="modal-voter-id" id="modal-id">ID #—</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <div class="modal-name" id="modal-name">—</div>
+          <span id="edit-mode-badge" style="display:none;font-size:10px;font-weight:600;background:var(--warn-bg);color:var(--warn);padding:2px 8px;border-radius:999px;letter-spacing:0.04em;">EDITING</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button id="btn-toggle-edit" class="btn btn-secondary" style="font-size:12px;padding:6px 12px;display:none;" onclick="toggleInlineEdit()">
+          <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
+        </button>
+        <button class="modal-close" onclick="closeVoterModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+    </div>
+
+    <!-- Unified inline-edit body -->
+    <div class="modal-body" id="modal-inline-body" style="padding-bottom:0"></div>
+
+    <!-- Government Aid section always shown below -->
+    <div id="mtab-body-aid-inline" style="padding: 0 1.25rem 1.25rem;">
+      <div style="border-top:1px solid var(--border); padding-top:1rem;">
+        <div class="register-section-title" style="margin-bottom:0.75rem">🏛 Government Aid Received</div>
+        <div class="aid-list" id="aid-list"></div>
+        <div style="margin-top:1rem;">
+          <div style="font-size:11px;font-weight:600;color:var(--hint);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Add Aid Entry</div>
+          <div class="aid-add-row">
+            <input type="text" id="aid-program" placeholder="Program name (e.g. 4Ps, AICS, DSWD Ayuda…)" style="flex:1;min-width:150px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:13px;color:var(--text);background:var(--surface);outline:none;-webkit-appearance:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" />
+            <input type="date" id="aid-date" style="width:130px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:13px;color:var(--text);background:var(--surface);outline:none;" />
+            <input type="text" id="aid-amount" placeholder="Amount" style="width:110px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:13px;color:var(--text);background:var(--surface);outline:none;" />
+            <button class="btn btn-primary" onclick="addAidEntry()">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add
+            </button>
+          </div>
+          <p style="font-size:11px;color:var(--hint);margin-top:8px">Each entry is saved immediately.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit fields rendered dynamically by renderModalInlineBody() in edit mode -->
+
+    <div class="modal-actions" id="modal-actions"></div>
+  </div>
+</div>
+
+<!-- ══ TEAM MEMBER MODAL ══ -->
+<div class="modal-backdrop" id="team-modal" onclick="if(event.target===this)closeTeamModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div><div class="modal-voter-id">TEAM MEMBER</div><div class="modal-name" id="team-modal-title">Add Member</div></div>
+      <button class="modal-close" onclick="closeTeamModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-warn" id="team-modal-note">
+        <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>This will create a Firebase Auth account. Share the temporary password with the new member manually.</span>
+      </div>
+
+      <!-- Account Info -->
+      <div class="register-section-title" style="margin-top:0">Account Info</div>
+      <div class="form-grid">
+        <div class="field"><label>Full Name *</label><input type="text" id="tm-name" placeholder="e.g. Maria Santos" /></div>
+        <div class="field"><label>Initials *</label><input type="text" id="tm-initials" maxlength="3" placeholder="MS" autocapitalize="characters" /></div>
+        <div class="field full"><label>Email Address *</label><input type="email" id="tm-email" placeholder="e.g. maria@bfhomes.ph" inputmode="email" /></div>
+        <div class="field"><label>Temporary Password *</label><input type="password" id="tm-password" placeholder="Min. 6 characters" /></div>
+        <div class="field"><label>Phone Number</label><input type="tel" id="tm-phone" placeholder="e.g. 09171234567" inputmode="tel" /></div>
+        <div class="field full"><label>Assigned Barangay</label><input type="text" id="tm-barangay" placeholder="Leave blank for all barangays" /></div>
+      </div>
+
+      <!-- Role -->
+      <div class="register-section-title">Role</div>
+      <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;">
+        <label id="role-card-official" class="role-card role-card-active" onclick="selectRole('official')">
+          <div class="role-card-top">
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>Official</span>
+          </div>
+          <div class="role-card-desc">Can view voter records. Permissions below apply.</div>
+        </label>
+        <label id="role-card-admin" class="role-card" onclick="selectRole('admin')">
+          <div class="role-card-top">
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Admin</span>
+          </div>
+          <div class="role-card-desc">Full access to everything. All permissions granted automatically.</div>
+        </label>
+      </div>
+      <input type="hidden" id="tm-role" value="official" />
+
+      <!-- Permissions -->
+      <div id="tm-permissions-section">
+        <div class="register-section-title" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+          <span>Permissions</span>
+          <span style="font-size:11px;font-weight:400;color:var(--hint);text-transform:none;letter-spacing:0">What can this member do?</span>
+        </div>
+        <div class="perm-grid">
+          <label class="perm-item">
+            <input type="checkbox" id="perm-view-voters" checked />
+            <div class="perm-item-body">
+              <div class="perm-item-title">👁 View Voters</div>
+              <div class="perm-item-desc">Browse and search voter records</div>
+            </div>
+          </label>
+          <label class="perm-item">
+            <input type="checkbox" id="perm-edit-voters" />
+            <div class="perm-item-body">
+              <div class="perm-item-title">✏️ Edit Voters</div>
+              <div class="perm-item-desc">Modify voter details and info</div>
+            </div>
+          </label>
+          <label class="perm-item">
+            <input type="checkbox" id="perm-add-voters" />
+            <div class="perm-item-body">
+              <div class="perm-item-title">➕ Add Voters</div>
+              <div class="perm-item-desc">Register new voter records</div>
+            </div>
+          </label>
+          <label class="perm-item">
+            <input type="checkbox" id="perm-delete-voters" />
+            <div class="perm-item-body">
+              <div class="perm-item-title">🗑 Delete Voters</div>
+              <div class="perm-item-desc">Permanently remove voter records</div>
+            </div>
+          </label>
+          <label class="perm-item">
+            <input type="checkbox" id="perm-bulk-import" />
+            <div class="perm-item-body">
+              <div class="perm-item-title">📥 Bulk Import</div>
+              <div class="perm-item-desc">Import voters via CSV or PDF</div>
+            </div>
+          </label>
+          <label class="perm-item">
+            <input type="checkbox" id="perm-gov-aid" />
+            <div class="perm-item-body">
+              <div class="perm-item-title">🏛 Gov. Aid</div>
+              <div class="perm-item-desc">Add / remove aid entries</div>
+            </div>
+          </label>
+          <label class="perm-item">
+            <input type="checkbox" id="perm-export" />
+            <div class="perm-item-body">
+              <div class="perm-item-title">📤 Export Data</div>
+              <div class="perm-item-desc">Download voter lists as CSV</div>
+            </div>
+          </label>
+          <label class="perm-item">
+            <input type="checkbox" id="perm-view-team" />
+            <div class="perm-item-body">
+              <div class="perm-item-title">👥 View Team</div>
+              <div class="perm-item-desc">See other team members</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeTeamModal()">Cancel</button>
+      <button class="btn btn-primary" id="btn-save-team" onclick="saveTeamMember()">
+        <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Create Account
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// FIREBASE CONFIGURATION
+// ═══════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey:            "AIzaSyDaIu3RBY3D7GAwxzRhLSlG9QYp-FK7I70",
+  authDomain:        "database-pqe.firebaseapp.com",
+  projectId:         "database-pqe",
+  storageBucket:     "database-pqe.firebasestorage.app",
+  messagingSenderId: "17677723542",
+  appId:             "1:17677723542:web:0ba8f2a889ecf06193dfb7"
+};
+firebase.initializeApp(firebaseConfig);
+const db   = firebase.firestore();
+const auth = firebase.auth();
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let currentUser    = null;
+let allVoters      = [];
+let filteredVoters = [];
+let currentPage    = 1;
+let bulkRows       = [];
+const PAGE_SIZE    = 50;
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  auth.onAuthStateChanged(async user => {
+    document.getElementById('loading-screen').classList.add('hidden');
+    if (user) {
+      await loadUserProfile(user);
+    }
+  });
+
+  document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
+  document.getElementById('email').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
+});
+
+async function loadUserProfile(firebaseUser) {
+  try {
+    const doc = await db.collection('users').doc(firebaseUser.uid).get();
+    if (doc.exists) {
+      const d = doc.data();
+      currentUser = {
+        uid:      firebaseUser.uid,
+        email:    firebaseUser.email,
+        name:     d.name || firebaseUser.email,
+        initials: d.initials || firebaseUser.email.substring(0, 2).toUpperCase(),
+        role:     d.role || 'official',
+        barangay: d.barangay || null,
+        phone:    d.phone || ''
+      };
+    } else {
+      // First time: create user doc — only grant admin if no other users exist yet
+      let firstRole = 'official';
+      try {
+        const existing = await db.collection('users').limit(1).get();
+        if (existing.empty) firstRole = 'admin';
+      } catch(e) { /* default to official if check fails */ }
+      currentUser = {
+        uid:      firebaseUser.uid,
+        email:    firebaseUser.email,
+        name:     firebaseUser.email,
+        initials: firebaseUser.email.substring(0, 2).toUpperCase(),
+        role:     firstRole,
+        barangay: null
+      };
+      await db.collection('users').doc(firebaseUser.uid).set(currentUser);
+    }
+    showApp();
+  } catch (err) {
+    showToast('Error loading profile: ' + err.message, 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════
+async function handleLogin() {
+  const emailVal = document.getElementById('email').value.trim();
+  const passVal  = document.getElementById('password').value.trim();
+  const btn      = document.getElementById('login-btn');
+  const errBox   = document.getElementById('error-box');
+
+  errBox.classList.remove('show');
+  btn.disabled = true;
+  btn.innerHTML = 'Signing in…';
+
+  try {
+    await auth.signInWithEmailAndPassword(emailVal, passVal);
+    // onAuthStateChanged will handle the rest
+  } catch (err) {
+    document.getElementById('error-text').textContent = err.message || 'Login failed.';
+    errBox.classList.add('show');
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Sign in`;
+  }
+}
+
+function handleLogout() {
+  _clearCache();
+  auth.signOut();
+  currentUser = null;
+  allVoters = [];
+  filteredVoters = [];
+  document.getElementById('app-page').classList.remove('active');
+  document.getElementById('login-page').classList.add('active');
+  document.getElementById('email').value    = '';
+  document.getElementById('password').value = '';
+}
+
+// ═══════════════════════════════════════════════════════════
+// SHOW APP
+// ═══════════════════════════════════════════════════════════
+function showApp() {
+  document.getElementById('login-page').classList.remove('active');
+  document.getElementById('app-page').classList.add('active');
+
+  document.getElementById('user-avatar').textContent = currentUser.initials;
+  document.getElementById('user-name').textContent   = currentUser.name;
+  const roleBadge = document.getElementById('user-role-badge');
+  roleBadge.textContent = currentUser.role === 'admin' ? 'Super Admin' : 'Official';
+  if (currentUser.role === 'admin') roleBadge.classList.add('admin');
+
+  if (currentUser.role === 'admin') {
+    document.getElementById('sb-admin-section').style.display = 'block';
+    document.getElementById('admin-toolbar-btns').style.display = 'flex';
+  }
+
+  loadVoters();
+  if (currentUser.role === 'admin') loadTeamMembers();
+
+  // Show admin bottom nav tabs on mobile
+  if (currentUser.role === 'admin') {
+    const bnavReg = document.getElementById('bnav-register');
+    const bnavTeam = document.getElementById('bnav-team');
+    if (bnavReg) bnavReg.style.display = 'flex';
+    if (bnavTeam) bnavTeam.style.display = 'flex';
+    const drawerAdmin = document.getElementById('drawer-sb-admin-section');
+    if (drawerAdmin) drawerAdmin.style.display = 'block';
+  }
+
+}
+
+// ═══════════════════════════════════════════════════════════
+// SECTION NAVIGATION
+// ═══════════════════════════════════════════════════════════
+function showSection(name) {
+  document.querySelectorAll('.section-view').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+
+  // Update bottom nav active state
+  ['voters','register','team'].forEach(s => {
+    const el = document.getElementById('bnav-' + s);
+    if (el) el.classList.toggle('active', s === name);
+  });
+  // Update drawer active state
+  ['voters','register','team'].forEach(s => {
+    const el = document.getElementById('drawer-nav-' + s);
+    if (el) el.classList.toggle('active', s === name);
+  });
+
+  const nav = document.getElementById('nav-' + name);
+  if (nav) nav.classList.add('active');
+}
+
+let _pdfJsLoaded = false;
+function switchTab(tab) {
+  // Activate the right button
+  document.querySelectorAll('.panel-tab').forEach(t => {
+    const fn = t.getAttribute('onclick') || '';
+    t.classList.toggle('active', fn.includes("'" + tab + "'"));
+  });
+  // Show the right pane
+  ['single','bulk','pdf'].forEach(t => {
+    const el = document.getElementById('tab-' + t);
+    if (el) el.classList.toggle('active', t === tab);
+  });
+  // Lazy-load PDF.js only when the PDF tab is first opened
+  if (tab === 'pdf' && !_pdfJsLoaded) {
+    _pdfJsLoaded = true;
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    script.onload = () => initPdfWorker();
+    document.head.appendChild(script);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOAD VOTERS
+// ─ Serves from localStorage cache first (instant render), then
+//   fetches fresh data from Firestore in the background.
+//
+// Firestore composite indexes required (create in Firebase Console
+// → Firestore → Indexes → Composite):
+//   Collection: voters  |  Fields: barangay ASC, name ASC
+//   (Needed for the official-role where+orderBy query.)
+//   The admin query only uses orderBy('name') — single-field
+//   indexes are created automatically by Firestore.
+// ═══════════════════════════════════════════════════════════
+function _cacheKey() {
+  // Per-user cache so different officials don't share stale data.
+  return `voters_cache_${currentUser.uid}`;
+}
+
+function _saveCache(voters) {
+  try {
+    localStorage.setItem(_cacheKey(), JSON.stringify(voters));
+  } catch(e) {
+    // localStorage may be full or unavailable — fail silently.
+    console.warn('Could not save voters cache:', e);
+  }
+}
+
+function _loadCache() {
+  try {
+    const raw = localStorage.getItem(_cacheKey());
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) {
+    return null;
+  }
+}
+
+function _clearCache() {
+  try { localStorage.removeItem(_cacheKey()); } catch(e) {}
+}
+
+async function loadVoters() {
+  // ── 1. Serve cache immediately if available (instant render) ──
+  const cached = _loadCache();
+  if (cached && cached.length > 0) {
+    allVoters = cached;
+    initUI();
+    // Show a subtle indicator that a background refresh is running
+    document.getElementById('voter-list').insertAdjacentHTML(
+      'afterbegin',
+      '<div id="cache-refresh-banner" style="padding:6px 16px;font-size:11px;color:var(--hint);background:var(--bg);border-bottom:1px solid var(--border)">⟳ Refreshing from server…</div>'
+    );
+  } else {
+    document.getElementById('voter-list').innerHTML = '<div class="loading-row">Loading voter records…</div>';
+  }
+
+  // ── 2. Always fetch fresh data from Firestore ──
+  try {
+    let query = db.collection('voters');
+    if (currentUser.role !== 'admin' && currentUser.barangay) {
+      // Composite index: barangay ASC + name ASC
+      query = query.where('barangay', '==', currentUser.barangay).orderBy('name');
+    } else {
+      // Single-field index (auto-created by Firestore)
+      query = query.orderBy('name');
+    }
+    const snap = await query.get();
+    allVoters = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    _saveCache(allVoters);
+    initUI();
+  } catch (err) {
+    // If the composite index doesn't exist yet, fall back to client-side sort
+    if (err.code === 'failed-precondition' || (err.message && err.message.includes('index'))) {
+      console.warn('Firestore index missing — falling back to client-side sort. Create the composite index to fix this.', err);
+      try {
+        let query2 = db.collection('voters');
+        if (currentUser.role !== 'admin' && currentUser.barangay) {
+          query2 = query2.where('barangay', '==', currentUser.barangay);
+        }
+        const snap2 = await query2.get();
+        allVoters = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
+        allVoters.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        _saveCache(allVoters);
+        initUI();
+      } catch(err2) {
+        if (!cached) {
+          document.getElementById('voter-list').innerHTML = `<div class="loading-row" style="color:var(--danger)">Error loading data: ${escHtml(err2.message)}</div>`;
+        }
+        showToast('Failed to load voters: ' + err2.message, 'error');
+      }
+    } else {
+      // For other errors, if we already rendered from cache, just show a toast
+      if (!cached) {
+        document.getElementById('voter-list').innerHTML = `<div class="loading-row" style="color:var(--danger)">Error loading data: ${escHtml(err.message)}</div>`;
+      }
+      showToast('Failed to refresh voters: ' + err.message, 'error');
+    }
+  } finally {
+    // Remove the "refreshing" banner after fetch completes (success or fail)
+    const banner = document.getElementById('cache-refresh-banner');
+    if (banner) banner.remove();
+  }
+}
+
+function initUI() {
+  const barangays = [...new Set(allVoters.map(v => v.barangay).filter(Boolean))].sort();
+  const precincts = [...new Set(allVoters.map(v => v.precinct).filter(Boolean))].sort();
+  const teams     = [...new Set(allVoters.map(v => v.team).filter(Boolean))].sort();
+
+  document.getElementById('stat-total').textContent     = allVoters.length.toLocaleString();
+  document.getElementById('stat-barangays').textContent = barangays.length;
+  document.getElementById('stat-precincts').textContent = precincts.length;
+  document.getElementById('sb-total').textContent       = allVoters.length;
+
+  // Missing info counts
+  const noPhone  = allVoters.filter(v => !v.phone && !v.phone2).length;
+  document.getElementById('stat-no-phone').textContent = noPhone.toLocaleString();
+
+  // Barangay filter
+  const bSel = document.getElementById('barangay-filter');
+  bSel.innerHTML = '<option value="">All barangays</option>';
+  barangays.forEach(b => { const o = document.createElement('option'); o.value = b; o.textContent = b; bSel.appendChild(o); });
+
+  // Precinct filter
+  const pSel = document.getElementById('precinct-filter');
+  pSel.innerHTML = '<option value="">All precincts</option>';
+  precincts.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = 'Precinct ' + p; pSel.appendChild(o); });
+
+  // Team filter
+  const tSel = document.getElementById('team-filter');
+  tSel.innerHTML = '<option value="">All teams</option>';
+  teams.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; tSel.appendChild(o); });
+
+  // Sidebar barangay list
+  const bList = document.getElementById('sb-barangay-list');
+  bList.innerHTML = '';
+  barangays.forEach(b => {
+    const count = allVoters.filter(v => v.barangay === b).length;
+    const div = document.createElement('div');
+    div.className = 'sidebar-item';
+    div.dataset.barangay = b;
+    div.innerHTML = `<svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>${escHtml(b)}<span class="sidebar-badge">${count}</span>`;
+    div.addEventListener('click', () => filterByBarangay(b));
+    bList.appendChild(div);
+  });
+
+
+  // Sync drawer badges
+  const drawerTotal = document.getElementById('drawer-sb-total');
+  if (drawerTotal) drawerTotal.textContent = allVoters.length;
+  const drawerBList = document.getElementById('drawer-sb-barangay-list');
+  if (drawerBList) {
+    drawerBList.innerHTML = '';
+    barangays.forEach(b => {
+      const count = allVoters.filter(v => v.barangay === b).length;
+      const div = document.createElement('div');
+      div.className = 'sidebar-item';
+      div.dataset.barangay = b;
+      div.innerHTML = `<svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>${escHtml(b)}<span class="sidebar-badge">${count}</span>`;
+      div.addEventListener('click', () => { filterByBarangay(b); closeSidebar(); });
+      drawerBList.appendChild(div);
+    });
+  }
+
+  filteredVoters = [...allVoters];
+  currentPage = 1;
+  renderTable();
+}
+
+function filterByBarangay(b) {
+  document.getElementById('barangay-filter').value = b;
+  document.getElementById('missing-filter').value  = '';
+  handleSearch();
+  showSection('voters');
+}
+
+function filterMissing(type) {
+  document.getElementById('missing-filter').value = type;
+  handleSearch();
+  showSection('voters');
+}
+
+let _searchDebounce = null;
+function handleSearch() {
+  clearTimeout(_searchDebounce);
+  _searchDebounce = setTimeout(_doSearch, 120);
+}
+
+function _doSearch() {
+  const q  = document.getElementById('search-input').value.toLowerCase().trim();
+  const bg = document.getElementById('barangay-filter').value;
+  const pc = document.getElementById('precinct-filter').value;
+  const tm = document.getElementById('team-filter').value;
+  const mf = document.getElementById('missing-filter').value;
+
+  // Update precinct dropdown to only show precincts in the selected barangay
+  const pSel = document.getElementById('precinct-filter');
+  const relevantVoters = bg ? allVoters.filter(v => v.barangay === bg) : allVoters;
+  const availablePrecincts = [...new Set(relevantVoters.map(v => v.precinct).filter(Boolean))].sort();
+  // Only rebuild dropdown if options actually changed (prevents losing selection on every keystroke)
+  const currentOptions = [...pSel.options].slice(1).map(o => o.value).join(',');
+  if (currentOptions !== availablePrecincts.join(',')) {
+    pSel.innerHTML = '<option value="">All precincts</option>';
+    availablePrecincts.forEach(p => {
+      const o = document.createElement('option');
+      o.value = p; o.textContent = 'Precinct ' + p;
+      if (p === pc) o.selected = true;
+      pSel.appendChild(o);
+    });
+  }
+  const effectivePc = availablePrecincts.includes(pc) ? pc : '';
+
+  // Update team filter to only show teams in the selected barangay
+  const tSel = document.getElementById('team-filter');
+  const availableTeams = [...new Set(relevantVoters.map(v => v.team).filter(Boolean))].sort();
+  const currentTeamOptions = [...tSel.options].slice(1).map(o => o.value).join(',');
+  if (currentTeamOptions !== availableTeams.join(',')) {
+    tSel.innerHTML = '<option value="">All teams</option>';
+    availableTeams.forEach(t => {
+      const o = document.createElement('option');
+      o.value = t; o.textContent = t;
+      if (t === tm) o.selected = true;
+      tSel.appendChild(o);
+    });
+  }
+  const effectiveTm = availableTeams.includes(tm) ? tm : '';
+
+  filteredVoters = allVoters.filter(v => {
+    const matchQ  = !q || v.name?.toLowerCase().includes(q) || v.address?.toLowerCase().includes(q) || v.phone?.includes(q) || v.phone2?.includes(q);
+    const matchBg = !bg || v.barangay === bg;
+    const matchPc = !effectivePc || v.precinct === effectivePc;
+    const matchTm = !effectiveTm || v.team === effectiveTm;
+    const matchMf = !mf
+      || (mf === 'phone' && !v.phone && !v.phone2);
+    return matchQ && matchBg && matchPc && matchTm && matchMf;
+  });
+
+  document.getElementById('stat-results').textContent = filteredVoters.length.toLocaleString();
+  currentPage = 1;
+  renderTable();
+}
+
+// ═══════════════════════════════════════════════════════════
+// TABLE RENDER
+// ═══════════════════════════════════════════════════════════
+function renderTable() {
+  const list  = document.getElementById('voter-list');
+  const total = filteredVoters.length;
+  const totalP = Math.ceil(total / PAGE_SIZE);
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const end   = Math.min(start + PAGE_SIZE, total);
+  const page  = filteredVoters.slice(start, end);
+
+  document.getElementById('stat-results').textContent = total.toLocaleString();
+
+  if (page.length === 0) {
+    list.innerHTML = '<div class="empty-row">No voters found matching your search.</div>';
+    document.getElementById('voter-card-list').innerHTML = '<div class="loading-row">No matching voters found.</div>';
+    document.getElementById('pagination').style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = page.map((v, i) => {
+    const missingPhone = !v.phone && !v.phone2;
+    const missingClass = missingPhone ? ' missing-info' : '';
+    const phoneBadge   = missingPhone ? '<span class="missing-badge">NO PHONE</span>' : '';
+    return `
+    <div class="voter-row${missingClass}" onclick="openVoterModal('${escHtml(v.id)}')">
+      <div class="voter-num">${start + i + 1}</div>
+      <div class="voter-name">${escHtml(v.name || '')}</div>
+      <div class="voter-addr">${escHtml(v.address || '—')}</div>
+      <div class="voter-phone">${missingPhone ? `<span style="color:var(--warn);font-size:11px">—${phoneBadge}</span>` : escHtml(v.phone)}</div>
+      <div class="voter-barangay">${escHtml(v.barangay || '—')}</div>
+      <div class="voter-precinct">${escHtml(v.precinct || '—')}</div>
+      <div class="voter-action"><button class="btn-view">View</button></div>
+    </div>`;
+  }).join('');
+
+  // Render mobile cards
+  renderMobileCards(page, start);
+
+  // Pagination
+  const pagEl  = document.getElementById('pagination');
+  const infoEl = document.getElementById('page-info');
+  const btnsEl = document.getElementById('page-btns');
+
+  if (totalP <= 1) { pagEl.style.display = 'none'; return; }
+  pagEl.style.display = 'flex';
+  infoEl.textContent = `Showing ${start + 1}–${end} of ${total.toLocaleString()}`;
+
+  let btns = '';
+  const range = pageRange(currentPage, totalP, 7);
+  if (range[0] > 1) btns += `<button class="btn-page" onclick="goPage(1)">1</button>`;
+  if (range[0] > 2) btns += `<span style="padding:0 4px;color:var(--hint)">…</span>`;
+  range.forEach(p => { btns += `<button class="btn-page ${p === currentPage ? 'active' : ''}" onclick="goPage(${p})">${p}</button>`; });
+  if (range[range.length-1] < totalP - 1) btns += `<span style="padding:0 4px;color:var(--hint)">…</span>`;
+  if (range[range.length-1] < totalP) btns += `<button class="btn-page" onclick="goPage(${totalP})">${totalP}</button>`;
+  btnsEl.innerHTML = `
+    <button class="btn-page" onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>← Prev</button>
+    ${btns}
+    <button class="btn-page" onclick="goPage(${currentPage + 1})" ${currentPage === totalP ? 'disabled' : ''}>Next →</button>`;
+}
+
+function goPage(p) {
+  const totalP = Math.ceil(filteredVoters.length / PAGE_SIZE);
+  if (p < 1 || p > totalP) return;
+  currentPage = p;
+  renderTable();
+  document.querySelector('.content').scrollTop = 0;
+}
+
+function pageRange(current, total, size) {
+  let half = Math.floor(size / 2), start = Math.max(1, current - half), end = Math.min(total, start + size - 1);
+  if (end - start < size - 1) start = Math.max(1, end - size + 1);
+  const r = []; for (let i = start; i <= end; i++) r.push(i); return r;
+}
+
+// ═══════════════════════════════════════════════════════════
+// VOTER MODAL — view / edit / gov aid
+// ═══════════════════════════════════════════════════════════
+let modalVoter     = null;   // current voter object
+let modalVoterIdx  = null;   // index in filteredVoters
+let aidEntries     = [];     // live aid list for current voter
+
+let inlineEditMode = false;
+
+function switchModalTab(tab) {
+  // Legacy shim — routes to the new inline system
+  if (tab === 'info')  { inlineEditMode = false;  renderModalInlineBody(); }
+  if (tab === 'edit')  { inlineEditMode = true;   renderModalInlineBody(); }
+}
+
+function toggleInlineEdit() {
+  inlineEditMode = !inlineEditMode;
+  renderModalInlineBody();
+}
+
+function renderModalInlineBody() {
+  const body    = document.getElementById('modal-inline-body');
+  const badge   = document.getElementById('edit-mode-badge');
+  const editBtn = document.getElementById('btn-toggle-edit');
+  const actions = document.getElementById('modal-actions');
+  const isAdmin = currentUser?.role === 'admin';
+
+  if (badge)   badge.style.display   = inlineEditMode ? 'inline-flex' : 'none';
+  if (editBtn) editBtn.textContent   = inlineEditMode ? 'Cancel' : 'Edit';
+
+  if (!inlineEditMode) {
+    // ── VIEW mode
+    const field = (icon, label, val, mono = false) => `
+      <div class="modal-field">
+        <div class="modal-field-icon"><svg viewBox="0 0 24 24">${icon}</svg></div>
+        <div><div class="modal-key">${label}</div><div class="modal-val${mono ? ' mono' : ''}">${escHtml(val || '—')}</div></div>
+      </div>`;
+    body.innerHTML = `
+      ${field('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>', 'Full Name', modalVoter.name)}
+      ${field('<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>', 'Birthday', modalVoter.birthday)}
+      ${field('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.1 19.79 19.79 0 0 1 1.61 4.5 2 2 0 0 1 3.6 2.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.5 17z"/>', 'Phone', modalVoter.phone)}
+      ${modalVoter.phone2 ? field('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.1 19.79 19.79 0 0 1 1.61 4.5 2 2 0 0 1 3.6 2.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.5 17z"/>', 'Alt. Phone', modalVoter.phone2) : ''}
+      ${field('<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>', 'Registered Address', modalVoter.address)}
+      ${field('<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>', 'Barangay', modalVoter.barangay)}
+      ${field('<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>', 'Precinct', modalVoter.precinct, true)}
+      ${field('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', 'Civil Status', modalVoter.civilStatus)}
+      ${modalVoter.team  ? field('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>', 'Team / Leader', modalVoter.team) : ''}
+      ${modalVoter.notes ? field('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>', 'Notes', modalVoter.notes) : ''}
+    `;
+    if (actions) actions.innerHTML = `
+      <button class="btn btn-secondary" onclick="closeVoterModal()">Close</button>
+      ${isAdmin ? `<button class="btn btn-danger" onclick="deleteVoter('${modalVoter.id}')">Delete</button>` : ''}`;
+  } else {
+    // ── EDIT mode — render editable fields directly in body
+    const civil = ['','Single','Married','Widowed','Separated','Annulled'];
+    const sel = (id, val) => civil.map(o => `<option value="${o}"${val===o?' selected':''}>${o||'Select…'}</option>`).join('');
+    // If lastname/firstname not stored separately, try to parse from combined name "LAST, FIRST MIDDLE SUFFIX"
+    let editLastname  = modalVoter.lastname  || '';
+    let editFirstname = modalVoter.firstname || '';
+    let editMiddle    = modalVoter.middlename || '';
+    let editSuffix    = modalVoter.suffix || '';
+    if (!editLastname && !editFirstname && modalVoter.name) {
+      const parts = modalVoter.name.split(',');
+      editLastname  = (parts[0] || '').trim();
+      const rest    = (parts[1] || '').trim().split(' ').filter(Boolean);
+      editFirstname = rest[0] || '';
+      editMiddle    = rest.length > 2 ? rest.slice(1, -1).join(' ') : (rest[1] || '');
+      editSuffix    = rest.length > 2 ? rest[rest.length - 1] : '';
+    }
+    body.innerHTML = `
+      <div style="padding:1rem 1.25rem;display:flex;flex-direction:column;gap:0.75rem;">
+        <div class="register-section-title" style="margin-bottom:0.25rem">Personal Information</div>
+        <div class="form-grid">
+          <div class="field"><label>Last Name *</label><input id="e-lastname" value="${escHtml(editLastname)}" autocapitalize="characters"/></div>
+          <div class="field"><label>First Name *</label><input id="e-firstname" value="${escHtml(editFirstname)}" autocapitalize="characters"/></div>
+          <div class="field"><label>Middle Name</label><input id="e-middlename" value="${escHtml(editMiddle)}"/></div>
+          <div class="field"><label>Suffix</label><input id="e-suffix" value="${escHtml(editSuffix)}"/></div>
+          <div class="field"><label>Birthday</label><input id="e-birthday" type="date" value="${escHtml(modalVoter.birthday||'')}"/></div>
+          <div class="field"><label>Civil Status</label><select id="e-civil">${sel('e-civil', modalVoter.civilStatus)}</select></div>
+        </div>
+        <div class="register-section-title" style="margin-bottom:0.25rem">Contact & Location</div>
+        <div class="form-grid">
+          <div class="field"><label>Phone</label><input id="e-phone" value="${escHtml(modalVoter.phone||'')}" inputmode="tel"/></div>
+          <div class="field"><label>Alt. Phone</label><input id="e-phone2" value="${escHtml(modalVoter.phone2||'')}" inputmode="tel"/></div>
+          <div class="field full"><label>Address *</label><input id="e-address" value="${escHtml(modalVoter.address||'')}"/></div>
+          <div class="field"><label>Barangay *</label><input id="e-barangay" value="${escHtml(modalVoter.barangay||'')}"/></div>
+          <div class="field"><label>Precinct *</label><input id="e-precinct" value="${escHtml(modalVoter.precinct||'')}"/></div>
+        </div>
+        <div class="register-section-title" style="margin-bottom:0.25rem">Voter Details</div>
+        <div class="form-grid">
+          <div class="field"><label>Voter ID</label><input id="e-voterid" value="${escHtml(modalVoter.voterId||'')}"/></div>
+          <div class="field"><label>Team / Leader</label><input id="e-team" value="${escHtml(modalVoter.team||'')}"/></div>
+          <div class="field full"><label>Notes</label><textarea id="e-notes">${escHtml(modalVoter.notes||'')}</textarea></div>
+        </div>
+      </div>`;
+    if (actions) actions.innerHTML = `
+      <button class="btn btn-secondary" onclick="inlineEditMode=false;renderModalInlineBody()">Cancel</button>
+      <button class="btn btn-primary" id="btn-save-edit" onclick="saveVoterEdit()" style="margin-left:auto">
+        <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save Changes
+      </button>`;
+  }
+}
+
+function renderModalActions(tab) {
+  // Legacy shim kept for compatibility
+  switchModalTab(tab);
+}
+
+function openVoterModal(id) {
+  const v = filteredVoters.find(x => x.id === String(id));
+  if (!v) return;
+  const idx = filteredVoters.indexOf(v);
+  modalVoter    = v;
+  modalVoterIdx = idx;
+  aidEntries    = Array.isArray(v.govAid) ? JSON.parse(JSON.stringify(v.govAid)) : [];
+
+  document.getElementById('modal-id').textContent   = v.voterId ? `Voter ID: ${v.voterId}` : `Precinct: ${v.precinct || '—'}`;
+  document.getElementById('modal-name').textContent = v.name || '—';
+
+  // Prefill hidden legacy edit fields (used by saveVoterEdit)
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  set('e-lastname',   v.lastname);
+  set('e-firstname',  v.firstname);
+  set('e-middlename', v.middlename);
+  set('e-suffix',     v.suffix);
+  set('e-birthday',   v.birthday);
+  set('e-civil',      v.civilStatus);
+  set('e-phone',      v.phone);
+  set('e-phone2',     v.phone2);
+  set('e-address',    v.address);
+  set('e-barangay',   v.barangay);
+  set('e-precinct',   v.precinct);
+  set('e-voterid',    v.voterId);
+  set('e-team',       v.team);
+  set('e-notes',      v.notes);
+
+  // ── Aid tab
+  renderAidList();
+
+  // Reset to view mode and render
+  inlineEditMode = false;
+  renderModalInlineBody();
+
+  // Show edit button only for admins
+  const editBtn = document.getElementById('btn-toggle-edit');
+  if (editBtn) editBtn.style.display = currentUser?.role === 'admin' ? '' : 'none';
+
+  document.getElementById('voter-modal').classList.add('open');
+
+  // Audit log
+  db.collection('audit_logs').add({ viewedBy: currentUser.uid, voterName: v.name, voterId: v.id, barangay: v.barangay, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+}
+
+function renderAidList() {
+  const list = document.getElementById('aid-list');
+  if (aidEntries.length === 0) {
+    list.innerHTML = `<div class="aid-empty">No government aid recorded yet.<br>Use the form below to add entries.</div>`;
+    return;
+  }
+  list.innerHTML = aidEntries.map((a, i) => `
+    <div class="aid-item">
+      <div>
+        <div class="aid-item-name">${escHtml(a.program)}</div>
+        ${a.amount ? `<div class="aid-item-date">₱${escHtml(a.amount)}${a.date ? ' · ' + escHtml(a.date) : ''}</div>` : (a.date ? `<div class="aid-item-date">${escHtml(a.date)}</div>` : '')}
+      </div>
+      <span style="flex:1"></span>
+      <button class="aid-item-remove" onclick="removeAidEntry(${i})" title="Remove">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>`).join('');
+}
+
+function addAidEntry() {
+  const programInput = document.getElementById('aid-program');
+  const date         = document.getElementById('aid-date').value;
+  const amount       = document.getElementById('aid-amount').value.trim();
+  const program      = programInput.value.trim();
+
+  if (!program) { showToast('Please type a program name.', 'warn'); return; }
+
+  aidEntries.push({ program, date, amount });
+  // Save immediately to Firestore
+  saveAidToFirestore();
+
+  // Clear inputs
+  programInput.value = '';
+  document.getElementById('aid-date').value   = '';
+  document.getElementById('aid-amount').value = '';
+  renderAidList();
+  renderModalActions('info');
+  showToast(`"${program}" added.`, 'success');
+}
+
+function removeAidEntry(i) {
+  const removed = aidEntries.splice(i, 1)[0];
+  saveAidToFirestore();
+  renderAidList();
+  renderModalActions('info');
+  showToast(`"${removed.program}" removed.`, 'success');
+}
+
+async function saveAidToFirestore() {
+  if (!modalVoter?.id) return;
+  try {
+    await db.collection('voters').doc(modalVoter.id).update({ govAid: aidEntries });
+    // Update local cache
+    modalVoter.govAid = JSON.parse(JSON.stringify(aidEntries));
+    const v = allVoters.find(x => x.id === modalVoter.id);
+    if (v) v.govAid = modalVoter.govAid;
+  } catch(err) { showToast('Could not save aid: ' + err.message, 'error'); }
+}
+
+async function saveVoterEdit() {
+  if (modalVoter?.id?.startsWith('_pending_')) {
+    showToast('This record is still syncing from a bulk import. Please refresh the page first.', 'warn');
+    return;
+  }
+  const get = id => document.getElementById(id)?.value?.trim() || '';
+  const lastname  = get('e-lastname');
+  const firstname = get('e-firstname');
+  const address   = get('e-address');
+  const barangay  = get('e-barangay');
+  const precinct  = get('e-precinct');
+
+  if (!lastname || !firstname || !address || !barangay || !precinct) {
+    showToast('Last name, first name, address, barangay and precinct are required.', 'warn'); return;
+  }
+
+  const btn = document.getElementById('btn-save-edit');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  const middlename = get('e-middlename');
+  const suffix     = get('e-suffix');
+  const nameParts  = [lastname, [firstname, middlename].filter(Boolean).join(' ') + (suffix ? ' ' + suffix : '')];
+  const name       = nameParts.join(', ');
+
+  const updates = {
+    name, lastname, firstname, middlename, suffix,
+    birthday:    get('e-birthday'),
+    civilStatus: get('e-civil'),
+    phone:       get('e-phone'),
+    phone2:      get('e-phone2'),
+    address, barangay, precinct,
+    voterId:     get('e-voterid'),
+    team:        get('e-team'),
+    notes:       get('e-notes'),
+    updatedBy:   currentUser.uid,
+    updatedAt:   firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  try {
+    await db.collection('voters').doc(modalVoter.id).update(updates);
+    // Update all three caches so the table re-renders correctly
+    Object.assign(modalVoter, updates);
+    const av = allVoters.find(x => x.id === modalVoter.id);
+    if (av) Object.assign(av, updates);
+    const fv = filteredVoters.find(x => x.id === modalVoter.id);
+    if (fv) Object.assign(fv, updates);
+    // Refresh stat cards (missing phone count may have changed)
+    const noPhone = allVoters.filter(v => !v.phone && !v.phone2).length;
+    document.getElementById('stat-no-phone').textContent = noPhone.toLocaleString();
+    // Switch back to view mode — renderModalInlineBody reads from modalVoter which we just updated
+    document.getElementById('modal-name').textContent = name;
+    document.getElementById('modal-id').textContent   = updates.voterId ? `Voter ID: ${updates.voterId}` : `Precinct: ${updates.precinct || '—'}`;
+    inlineEditMode = false;
+    renderModalInlineBody();
+    // Re-render the table row in place so phone/ID badges update immediately
+    renderTable();
+    showToast('Voter details saved!', 'success');
+  } catch(err) {
+    showToast('Save failed: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Changes`;
+  }
+}
+
+function closeVoterModal() {
+  document.getElementById('voter-modal').classList.remove('open');
+  modalVoter = null;
+  aidEntries = [];
+}
+
+async function deleteVoter(id) {
+  if (String(id).startsWith('_pending_')) {
+    showToast('This record is still syncing from a bulk import. Please refresh the page first.', 'warn');
+    return;
+  }
+  if (!confirm('Delete this voter record permanently?')) return;
+  try {
+    await db.collection('voters').doc(id).delete();
+    showToast('Voter record deleted.', 'success');
+    closeVoterModal();
+    // Remove from local caches instead of a full reload
+    allVoters      = allVoters.filter(v => v.id !== id);
+    filteredVoters = filteredVoters.filter(v => v.id !== id);
+    // Update stat cards
+    document.getElementById('stat-total').textContent     = allVoters.length.toLocaleString();
+    document.getElementById('stat-no-phone').textContent  = allVoters.filter(v => !v.phone && !v.phone2).length.toLocaleString();
+    document.getElementById('sb-total').textContent       = allVoters.length;
+    renderTable();
+  } catch (err) { showToast('Delete failed: ' + err.message, 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// SINGLE VOTER REGISTRATION
+// ═══════════════════════════════════════════════════════════
+function clearSingleForm() {
+  ['f-lastname','f-firstname','f-middlename','f-suffix','f-birthday','f-civil','f-phone','f-phone2','f-address','f-barangay','f-precinct','f-voterid','f-team','f-notes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+}
+
+async function saveSingleVoter() {
+  const get = id => document.getElementById(id)?.value?.trim() || '';
+
+  const lastname   = get('f-lastname');
+  const firstname  = get('f-firstname');
+  const address    = get('f-address');
+  const barangay   = get('f-barangay');
+  const precinct   = get('f-precinct');
+
+  if (!lastname || !firstname || !address || !barangay || !precinct) {
+    showToast('Please fill in all required fields (marked with *)', 'warn'); return;
+  }
+
+  const suffix    = get('f-suffix');
+  const nameParts = [lastname, firstname + (get('f-middlename') ? ' ' + get('f-middlename') : '') + (suffix ? ' ' + suffix : '')];
+  const name      = nameParts.join(', ');
+
+  const voter = {
+    name, lastname, firstname,
+    middlename:  get('f-middlename'),
+    suffix,
+    birthday:    get('f-birthday'),
+    civilStatus: get('f-civil'),
+    phone:       get('f-phone'),
+    phone2:      get('f-phone2'),
+    address, barangay, precinct,
+    voterId:     get('f-voterid'),
+    team:        get('f-team'),
+    notes:       get('f-notes'),
+    addedBy:     currentUser.uid,
+    addedAt:     firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  const btn = document.getElementById('btn-save-voter');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try {
+    const docRef = await db.collection('voters').add(voter);
+    // Update local cache — no full reload needed
+    const newVoter = { id: docRef.id, ...voter };
+    allVoters.push(newVoter);
+    allVoters.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    _saveCache(allVoters);
+    initUI();
+    showToast(`Voter "${name}" saved successfully!`, 'success');
+    clearSingleForm();
+  } catch (err) {
+    showToast('Save failed: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Voter`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// BULK IMPORT
+// ═══════════════════════════════════════════════════════════
+function parseBulkPreview() {
+  const raw = document.getElementById('bulk-input').value.trim();
+  if (!raw) { document.getElementById('bulk-preview-area').innerHTML = ''; document.getElementById('btn-bulk-import').disabled = true; return; }
+
+  const lines = raw.split('\n').filter(l => l.trim());
+  bulkRows = lines.map((line, i) => {
+    // Support both tab and comma separated
+    const cols = line.includes('\t') ? line.split('\t') : line.split(',');
+    const c = cols.map(x => x.trim());
+    const lastname   = c[0]  || '';
+    const firstname  = c[1]  || '';
+    const middlename = c[2]  || '';
+    const suffix     = c[3]  || '';
+    const birthday   = c[4]  || '';
+    const civilStatus= c[5]  || '';
+    const phone      = c[6]  || '';
+    const phone2     = c[7]  || '';
+    const address    = c[8]  || '';
+    const barangay   = c[9]  || '';
+    const precinct   = c[10] || '';
+    const voterId    = c[11] || '';
+    const team       = c[12] || '';
+    const notes      = c[13] || '';
+
+    const nameParts = [lastname, firstname + (middlename ? ' ' + middlename : '') + (suffix ? ' ' + suffix : '')].filter(Boolean);
+    const name = nameParts.join(', ');
+
+    const errors = [];
+    if (!lastname)  errors.push('missing lastname');
+    if (!firstname) errors.push('missing firstname');
+    if (!address)   errors.push('missing address');
+    if (!barangay)  errors.push('missing barangay');
+    if (!precinct)  errors.push('missing precinct');
+
+    return { row: i + 1, name, lastname, firstname, middlename, suffix, birthday, civilStatus, phone, phone2, address, barangay, precinct, voterId, team, notes, errors, valid: errors.length === 0 };
+  });
+
+  const validCount = bulkRows.filter(r => r.valid).length;
+  document.getElementById('btn-bulk-import').disabled = validCount === 0;
+
+  // Preview table (show first 20)
+  const preview = bulkRows.slice(0, 20);
+  const area = document.getElementById('bulk-preview-area');
+  area.innerHTML = `
+    <div class="bulk-preview">
+      <div class="bulk-preview-title">
+        Preview — ${bulkRows.length} rows parsed, <span style="color:var(--success)">${validCount} valid</span>${bulkRows.length - validCount > 0 ? `, <span style="color:var(--danger)">${bulkRows.length - validCount} with errors</span>` : ''}
+        ${bulkRows.length > 20 ? `<span style="color:var(--hint); font-weight:400"> (showing first 20)</span>` : ''}
+      </div>
+      <div style="overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius);">
+        <table class="preview-table">
+          <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Barangay</th><th>Precinct</th><th>Status</th></tr></thead>
+          <tbody>
+            ${preview.map(r => `<tr class="${r.valid ? '' : 'err'}">
+              <td>${r.row}</td>
+              <td>${escHtml(r.name || '(blank)')}</td>
+              <td>${escHtml(r.phone || '—')}</td>
+              <td>${escHtml(r.barangay || '—')}</td>
+              <td>${escHtml(r.precinct || '—')}</td>
+              <td>${r.valid ? '<span class="badge badge-ok">✓ OK</span>' : `<span class="badge badge-err">✗ ${escHtml(r.errors.join(', '))}</span>`}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+async function bulkImport() {
+  const valid = bulkRows.filter(r => r.valid);
+  if (valid.length === 0) return;
+
+  const btn = document.getElementById('btn-bulk-import');
+  btn.disabled = true;
+  btn.textContent = `Importing 0 / ${valid.length}…`;
+
+  let done = 0, failed = 0;
+  const BATCH_SIZE = 400; // Firestore batch limit is 500
+
+  for (let i = 0; i < valid.length; i += BATCH_SIZE) {
+    const chunk = valid.slice(i, i + BATCH_SIZE);
+    const batch = db.batch();
+    chunk.forEach(r => {
+      const ref = db.collection('voters').doc();
+      batch.set(ref, {
+        name: r.name, lastname: r.lastname, firstname: r.firstname,
+        middlename: r.middlename, suffix: r.suffix, birthday: r.birthday,
+        civilStatus: r.civilStatus, phone: r.phone, phone2: r.phone2,
+        address: r.address, barangay: r.barangay, precinct: r.precinct,
+        voterId: r.voterId, team: r.team, notes: r.notes,
+        addedBy: currentUser.uid, addedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    });
+    try {
+      await batch.commit();
+      done += chunk.length;
+    } catch (err) {
+      failed += chunk.length;
+    }
+    btn.textContent = `Importing ${done} / ${valid.length}…`;
+  }
+
+  if (failed === 0) {
+    showToast(`Successfully imported ${done} voter records!`, 'success');
+    document.getElementById('bulk-input').value = '';
+    document.getElementById('bulk-preview-area').innerHTML = '';
+    // Append imported rows to local cache — no full reload needed
+    valid.forEach(r => {
+      allVoters.push({
+        id: '_pending_' + Math.random().toString(36).slice(2), // temp ID until next real load
+        name: r.name, lastname: r.lastname, firstname: r.firstname,
+        middlename: r.middlename, suffix: r.suffix, birthday: r.birthday,
+        civilStatus: r.civilStatus, phone: r.phone, phone2: r.phone2,
+        address: r.address, barangay: r.barangay, precinct: r.precinct,
+        voterId: r.voterId, team: r.team, notes: r.notes,
+        addedBy: currentUser.uid
+      });
+    });
+    allVoters.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    _saveCache(allVoters);
+    bulkRows = [];
+    initUI();
+  } else {
+    showToast(`Imported ${done}, failed ${failed}. Check console for details.`, 'warn');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg> Import All Valid Rows`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// TEAM MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+async function loadTeamMembers() {
+  const grid = document.getElementById('team-grid');
+  grid.innerHTML = '<div class="loading-row">Loading team members…</div>';
+
+  try {
+    const snap = await db.collection('users').get();
+    const members = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    document.getElementById('sb-team').textContent = members.length;
+
+    if (members.length === 0) { grid.innerHTML = '<div class="loading-row">No team members yet. Add your first team member.</div>'; return; }
+
+    grid.innerHTML = members.map(m => `
+      <div class="team-card">
+        <div class="team-card-header">
+          <div class="team-avatar ${m.role === 'admin' ? 'admin' : 'official'}">${escHtml(m.initials || '?')}</div>
+          <div><div class="team-info-name">${escHtml(m.name || m.email)}</div><div class="team-info-email">${escHtml(m.email || '')}</div></div>
+        </div>
+        <div class="team-meta">
+          <div class="team-meta-row"><svg viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/></svg>${escHtml(m.barangay || 'All barangays')}</div>
+          <div class="team-meta-row"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Role: <strong>${m.role === 'admin' ? 'Super Admin' : 'Official'}</strong></div>
+          ${m.phone ? `<div class="team-meta-row"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.1 19.79 19.79 0 0 1 1.61 4.5 2 2 0 0 1 3.6 2.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.5 17z"/></svg>${escHtml(m.phone)}</div>` : ''}
+        </div>
+        ${m.id !== currentUser.uid ? `<div class="team-card-actions"><button class="btn btn-danger" style="font-size:12px;padding:5px 10px" onclick="deleteTeamMember('${m.id}', '${escHtml(m.name || m.email)}')">Remove</button></div>` : '<div class="team-card-actions"><span style="font-size:11px;color:var(--hint)">That\'s you</span></div>'}
+      </div>`).join('');
+  } catch (err) {
+    grid.innerHTML = `<div class="loading-row" style="color:var(--danger)">Error: ${escHtml(err.message)}</div>`;
+  }
+}
+
+function selectRole(role) {
+  document.getElementById('tm-role').value = role;
+  document.getElementById('role-card-official').classList.toggle('role-card-active', role === 'official');
+  document.getElementById('role-card-admin').classList.toggle('role-card-active', role === 'admin');
+  // Hide permissions section for admin (they get everything automatically)
+  const permSection = document.getElementById('tm-permissions-section');
+  if (permSection) permSection.style.display = role === 'admin' ? 'none' : '';
+}
+
+function openAddTeamModal() {
+  ['tm-name','tm-initials','tm-email','tm-password','tm-barangay','tm-phone'].forEach(id => { document.getElementById(id).value = ''; });
+  selectRole('official'); // resets hidden input + role card highlights
+  document.getElementById('team-modal').classList.add('open');
+}
+
+function closeTeamModal() { document.getElementById('team-modal').classList.remove('open'); }
+
+async function saveTeamMember() {
+  const name     = document.getElementById('tm-name').value.trim();
+  const initials = document.getElementById('tm-initials').value.trim().toUpperCase();
+  const email    = document.getElementById('tm-email').value.trim();
+  const password = document.getElementById('tm-password').value.trim();
+  const role     = document.getElementById('tm-role').value;
+  const barangay = document.getElementById('tm-barangay').value.trim();
+  const phone    = document.getElementById('tm-phone').value.trim();
+
+  if (!name || !email || !password) { showToast('Name, email, and password are required.', 'warn'); return; }
+  if (password.length < 6) { showToast('Password must be at least 6 characters.', 'warn'); return; }
+
+  // Ask for admin password BEFORE creating the new user so we can re-auth immediately
+  const adminPass = await promptAdminPassword();
+  if (!adminPass) { showToast('Admin password required to create team members.', 'warn'); return; }
+
+  const btn = document.getElementById('btn-save-team');
+  btn.disabled = true; btn.textContent = 'Creating…';
+
+  try {
+    // Create Firebase Auth user
+    const cred = await auth.createUserWithEmailAndPassword(email, password);
+    const uid  = cred.user.uid;
+
+    // Save user profile to Firestore
+    await db.collection('users').doc(uid).set({
+      name, initials: initials || name.substring(0,2).toUpperCase(),
+      email, role, barangay: barangay || null, phone,
+      createdBy: currentUser.uid,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Re-authenticate the admin so their session stays active
+    const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, adminPass);
+    await auth.currentUser.reauthenticateWithCredential(credential);
+
+    showToast(`Team member "${name}" created!`, 'success');
+    closeTeamModal();
+    loadTeamMembers();
+  } catch (err) {
+    if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+      showToast('New member created but re-auth failed — wrong admin password. Please log in again.', 'error');
+      handleLogout();
+    } else {
+      showToast('Error: ' + err.message, 'error');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Create Account`;
+  }
+}
+
+// Show an inline password prompt in the team modal (avoids browser prompt() blocks)
+function promptAdminPassword() {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;';
+    overlay.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;width:100%;max-width:360px;box-shadow:0 8px 40px rgba(0,0,0,0.2);">
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">Confirm your password</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:1rem;">Required to stay signed in after creating a new account.</div>
+        <input id="_reauth-pw" type="password" placeholder="Your admin password" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;outline:none;margin-bottom:1rem;-webkit-appearance:none;" autocomplete="current-password"/>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button id="_reauth-cancel" style="padding:9px 16px;border:1px solid var(--border);border-radius:var(--radius);background:none;font-family:var(--font);font-size:13px;cursor:pointer;">Cancel</button>
+          <button id="_reauth-ok" style="padding:9px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;">Confirm</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector('#_reauth-pw');
+    input.focus();
+    const finish = val => { document.body.removeChild(overlay); resolve(val); };
+    overlay.querySelector('#_reauth-ok').addEventListener('click', () => finish(input.value));
+    overlay.querySelector('#_reauth-cancel').addEventListener('click', () => finish(null));
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') finish(input.value); if (e.key === 'Escape') finish(null); });
+  });
+}
+
+async function deleteTeamMember(uid, name) {
+  if (!confirm(`Remove "${name}" from the team?\n\nThis removes their directory access. To fully prevent login, you must also delete their account in the Firebase Console > Authentication.\n\nContinue?`)) return;
+  try {
+    await db.collection('users').doc(uid).delete();
+    showToast(`Removed "${name}" from team.`, 'success');
+    loadTeamMembers();
+  } catch (err) { showToast('Error: ' + err.message, 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════
+function showToast(msg, type = 'info') {
+  const icons = {
+    success: '<circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/>',
+    error:   '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+    warn:    '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+    info:    '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'
+  };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<svg viewBox="0 0 24 24">${icons[type] || icons.info}</svg><span>${escHtml(msg)}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// ═══════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// PDF IMPORT — COMELEC PCVL Parser
+// ═══════════════════════════════════════════════════════════
+// Fix PDF.js worker for file:// protocol — fetch worker script and create a blob URL
+async function initPdfWorker() {
+  try {
+    const resp = await fetch('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js');
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const text = await resp.text();
+    const blob = new Blob([text], { type: 'application/javascript' });
+    pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+  } catch(e) {
+    console.error('Could not load PDF.js worker from CDN:', e);
+    // Show a visible error in the PDF dropzone so the user knows PDF import won't work
+    const dropzone = document.getElementById('pdf-dropzone');
+    if (dropzone) {
+      dropzone.innerHTML = `<div style="padding:1.5rem;text-align:center;color:var(--danger);font-size:13px;">
+        <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;margin-bottom:8px;display:block;margin-left:auto;margin-right:auto"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        PDF import is unavailable — could not load the PDF engine from the CDN.<br>
+        <span style="color:var(--muted);font-size:12px;margin-top:4px;display:block">Check your internet connection and reload the page to try again.</span>
+      </div>`;
+      dropzone.style.pointerEvents = 'none';
+    }
+    showToast('PDF engine failed to load. PDF import is disabled.', 'error');
+  }
+}
+
+let pdfFiles = [];
+let pdfParsedRows = [];
+
+// Defer all DOM-dependent PDF setup until after page load
+window.addEventListener('load', () => {
+  // initPdfWorker() is called after PDF.js is lazy-loaded when the PDF tab opens
+  const pdfDropzone = document.getElementById('pdf-dropzone');
+  if (!pdfDropzone) return;
+  pdfDropzone.addEventListener('dragover', e => { e.preventDefault(); pdfDropzone.classList.add('drag-over'); });
+  pdfDropzone.addEventListener('dragleave', () => pdfDropzone.classList.remove('drag-over'));
+  pdfDropzone.addEventListener('drop', e => { e.preventDefault(); pdfDropzone.classList.remove('drag-over'); handlePdfFiles(e.dataTransfer.files); });
+});
+
+function handlePdfFiles(fileList) {
+  for (const f of fileList) {
+    if (f.type === 'application/pdf' || f.name.endsWith('.pdf')) {
+      if (!pdfFiles.find(x => x.file.name === f.name && x.file.size === f.size)) {
+        pdfFiles.push({ file: f, rows: [], status: 'pending' });
+      }
+    }
+  }
+  renderPdfQueue();
+  if (pdfFiles.some(f => f.status === 'pending')) parseAllPdfs();
+}
+
+function renderPdfQueue() {
+  const q = document.getElementById('pdf-queue');
+  q.innerHTML = pdfFiles.map((pf, i) => `
+    <div class="pdf-queue-item">
+      <div class="pdf-queue-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <div class="pdf-queue-info">
+        <div class="pdf-queue-name">${escHtml(pf.file.name)}</div>
+        <div class="pdf-queue-meta">${(pf.file.size/1024).toFixed(0)} KB · ${pf.status === 'done' ? pf.rows.length + ' voters found' : pf.status === 'error' ? 'Parse error' : 'Pending…'}</div>
+      </div>
+      ${pf.status === 'pending' ? '' : `<button class="pdf-queue-remove" onclick="removePdfFile(${i})"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`}
+    </div>`).join('');
+}
+
+function removePdfFile(i) {
+  pdfFiles.splice(i, 1);
+  rebuildPdfRows();
+  renderPdfQueue();
+  renderPdfPreview();
+}
+
+function rebuildPdfRows() {
+  pdfParsedRows = pdfFiles.flatMap(pf => pf.rows || []);
+}
+
+async function parseAllPdfs() {
+  const progress = document.getElementById('pdf-import-progress');
+  const progressFiles = document.getElementById('pdf-progress-files');
+  progress.classList.add('show');
+  document.getElementById('pdf-form-actions').style.display = 'none';
+
+  for (const pf of pdfFiles) {
+    if (pf.status !== 'pending') continue;
+    pf.status = 'parsing';
+
+    // Add progress row
+    const rowId = 'pf-' + Math.random().toString(36).slice(2);
+    progressFiles.insertAdjacentHTML('beforeend', `
+      <div class="progress-file" id="${rowId}">
+        <div class="progress-file-name">${escHtml(pf.file.name)}</div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="${rowId}-bar"></div></div>
+        <div class="progress-status" id="${rowId}-status">Reading…</div>
+      </div>`);
+
+    try {
+      const buf = await pf.file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      const totalPages = pdf.numPages;
+      let rows = [];
+      let currentPrecinct = '';
+      let currentBarangay = '';
+
+      for (let p = 1; p <= totalPages; p++) {
+        document.getElementById(`${rowId}-bar`).style.width = Math.round(p / totalPages * 100) + '%';
+        document.getElementById(`${rowId}-status`).textContent = `Page ${p} of ${totalPages}…`;
+
+        const page = await pdf.getPage(p);
+        const tc = await page.getTextContent();
+        // Join with space for header line matching (items on same line need spaces between them)
+        const textSpaced = tc.items.map(i => i.str.trim()).filter(Boolean).join(' ');
+
+        // Extract precinct from page header
+        const precMatch = textSpaced.match(/Prec\s*:\s*([A-Z0-9]+)/);
+        if (precMatch) currentPrecinct = precMatch[1];
+
+        // Extract barangay — normalize spacing/dots (e.g. "B. F. HOMES" → "B F Homes")
+        // PDF.js joins items with single spaces so we match up to "LIST OF VOTERS"
+        const barMatch = textSpaced.match(/BARANGAY\s*:\s*([A-Z][A-Z0-9 .,'()-]+?)\s+LIST\s+OF\s+VOTERS/i);
+        if (barMatch) {
+          currentBarangay = barMatch[1].trim()
+            .replace(/\./g, '')         // remove dots only: "B. F. HOMES" → "B  F  HOMES"
+            .replace(/\s+/g, ' ')       // collapse spaces: → "B F HOMES"
+            .trim();
+          // Title-case: "B F HOMES" → "B F Homes", "DON BOSCO" → "Don Bosco"
+          currentBarangay = currentBarangay.replace(/\b\w+/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+        }
+
+        // Parse voter rows — pass persisted barangay so pages without header still get it
+        rows = rows.concat(parsePageItems(tc.items, currentPrecinct, currentBarangay));
+      }
+
+      // Deduplicate within this PDF by same key used at import (lastname|firstname|precinct)
+      const seen = new Set();
+      pf.rows = rows.filter(r => {
+        const key = (r.lastname + '|' + r.firstname + '|' + r.precinct).toUpperCase().replace(/\s+/g, '');
+        if (seen.has(key)) return false;
+        seen.add(key); return true;
+      });
+      pf.status = 'done';
+      document.getElementById(`${rowId}-bar`).classList.add('done');
+      document.getElementById(`${rowId}-bar`).style.width = '100%';
+      document.getElementById(`${rowId}-status`).textContent = `✓ ${pf.rows.length} voters extracted`;
+    } catch (err) {
+      pf.status = 'error';
+      document.getElementById(`${rowId}-bar`).classList.add('error');
+      document.getElementById(`${rowId}-status`).textContent = 'Error: ' + err.message;
+    }
+    renderPdfQueue();
+  }
+
+  rebuildPdfRows();
+  renderPdfPreview();
+  if (pdfParsedRows.length > 0) {
+    document.getElementById('pdf-form-actions').style.display = 'flex';
+    document.getElementById('btn-pdf-import').textContent = '';
+    document.getElementById('btn-pdf-import').innerHTML = `<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg> Import ${pdfParsedRows.length.toLocaleString()} Records`;
+  }
+}
+
+function parsePageItems(items, precinct, barangay) {
+  // Collect raw text items with x,y positions
+  const words = items.map(item => ({
+    text: item.str.trim(),
+    x: item.transform ? item.transform[4] : 0,
+    y: item.transform ? item.transform[5] : 0
+  })).filter(w => w.text);
+
+  // Group by approximate y-position (same line = within 4 pts)
+  const lines = [];
+  for (const w of words) {
+    const existing = lines.find(l => Math.abs(l.y - w.y) < 4);
+    if (existing) {
+      existing.parts.push(w);
+    } else {
+      lines.push({ y: w.y, parts: [w] });
+    }
+  }
+  lines.sort((a, b) => b.y - a.y); // top to bottom (PDF y increases upward)
+
+  // Sort parts within each line by x
+  for (const l of lines) l.parts.sort((a, b) => a.x - b.x);
+
+  // Skip header/footer patterns
+  const isSkippableLine = text => /^(Legend|A\s*-|B\s*-|C\s*-|NOTICE|Date:|Page\s+\d|Republic|COMMISSION|PROVINCE|CITY|BARANGAY|LIST OF|MAY|PCVL|No\.|Voter's|Prec\s*:)/.test(text);
+
+  // Find where numeric voter rows start
+  let startIdx = 0;
+  while (startIdx < lines.length) {
+    const t = lines[startIdx].parts[0]?.text || '';
+    if (/^\d+$/.test(t)) break;
+    startIdx++;
+  }
+
+  const rows = [];
+  let i = startIdx;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const parts = line.parts;
+    const firstToken = parts[0]?.text || '';
+
+    // Must start with a voter number
+    if (!/^\d+$/.test(firstToken)) { i++; continue; }
+
+    const voterNo = firstToken;
+
+    // Collect flag letters (A=Illiterate, B=PWD, C=Senior)
+    let flagIdx = 1;
+    const flags = [];
+    while (flagIdx < parts.length && /^[ABC]$/.test(parts[flagIdx]?.text)) {
+      flags.push(parts[flagIdx].text);
+      flagIdx++;
+    }
+
+    // Split remaining parts into name column (x < 320) and address column (x >= 320)
+    const dataParts = parts.slice(flagIdx);
+    const nameParts = dataParts.filter(p => p.x < 320);
+    const addrParts = dataParts.filter(p => p.x >= 320);
+
+    let name    = nameParts.map(p => p.text).join(' ').trim();
+    let address = addrParts.map(p => p.text).join(' ').trim();
+
+    // Consume continuation lines: lines that do NOT start with a voter number
+    // and are not a skippable header/footer
+    let j = i + 1;
+    while (j < lines.length) {
+      const nextParts = lines[j].parts;
+      const nextFirst = nextParts[0]?.text || '';
+      const nextText  = nextParts.map(p => p.text).join(' ');
+
+      // Stop if next line is a new voter row or skippable header
+      if (/^\d+$/.test(nextFirst)) break;
+      if (isSkippableLine(nextText)) { j++; continue; }
+
+      // It's a continuation — append based on x column
+      const contName = nextParts.filter(p => p.x < 320).map(p => p.text).join(' ').trim();
+      const contAddr = nextParts.filter(p => p.x >= 320).map(p => p.text).join(' ').trim();
+      if (contName) name    += ' ' + contName;
+      if (contAddr) address += ' ' + contAddr;
+      j++;
+    }
+    i = j;
+
+    // Clean up
+    name    = name.replace(/[\s_]+$/, '').trim();
+    address = address.replace(/[\s_]+$/, '').trim();
+    if (!name || name.length < 3) continue;
+
+    // Parse name: "SURNAME, FIRSTNAME MIDDLENAME" or "SURNAME, JR., FIRSTNAME MIDDLENAME"
+    const sfxList = ['JR.','SR.','JR','SR','II','III','IV','V'];
+    let lastname = '', firstname = '', middlename = '', suffix = '';
+    const commaIdx = name.indexOf(',');
+    if (commaIdx > 0) {
+      lastname = name.substring(0, commaIdx).trim();
+      let rest = name.substring(commaIdx + 1).trim();
+      // Handle suffix right after lastname comma: "ABILA, SR., FIRSTNAME..."
+      const firstRestToken = rest.split(/\s+/)[0] || '';
+      const cleanFirst = firstRestToken.replace(/,$/,'').toUpperCase();
+      if (sfxList.includes(cleanFirst)) {
+        suffix = cleanFirst;
+        rest = rest.substring(firstRestToken.length).trim();
+      }
+      const tokens = rest.split(/\s+/).filter(Boolean);
+      // Check suffix at end of token list
+      if (!suffix && tokens.length > 0 && sfxList.includes(tokens[tokens.length - 1].toUpperCase())) {
+        suffix = tokens.pop();
+      }
+      firstname  = tokens[0] || '';
+      middlename = tokens.slice(1).join(' ');
+    } else {
+      const tokens = name.split(/\s+/);
+      lastname   = tokens[0] || '';
+      firstname  = tokens[1] || '';
+      middlename = tokens.slice(2).join(' ');
+    }
+
+    rows.push({
+      voterId:    voterNo,
+      name,
+      lastname,
+      firstname,
+      middlename,
+      suffix,
+      address,
+      barangay,
+      precinct,
+      notes: flags.map(f => f==='A'?'Illiterate':f==='B'?'PWD':f==='C'?'Senior Citizen':'').filter(Boolean).join(', ')
+    });
+  }
+
+  return rows;
+}
+
+function renderPdfPreview() {
+  const area = document.getElementById('pdf-preview-area');
+  if (pdfParsedRows.length === 0) { area.innerHTML = ''; return; }
+
+  const preview = pdfParsedRows.slice(0, 20);
+  area.innerHTML = `
+    <div class="bulk-preview" style="margin-top:1.25rem">
+      <div class="bulk-preview-title">Preview — first ${preview.length} of ${pdfParsedRows.length.toLocaleString()} voters</div>
+      <div style="overflow-x:auto">
+        <table class="preview-table">
+          <thead><tr>
+            <th>No.</th><th>Name</th><th>Precinct</th><th>Barangay</th><th>Address</th><th>Notes</th>
+          </tr></thead>
+          <tbody>
+            ${preview.map(r => `<tr>
+              <td style="font-family:var(--mono);color:var(--hint)">${escHtml(r.voterId)}</td>
+              <td><strong>${escHtml(r.lastname)}</strong>, ${escHtml(r.firstname)} ${escHtml(r.middlename)}${r.suffix?' '+escHtml(r.suffix):''}</td>
+              <td style="font-family:var(--mono);color:var(--accent)">${escHtml(r.precinct)}</td>
+              <td>${escHtml(r.barangay)}</td>
+              <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(r.address)}</td>
+              <td>${r.notes ? `<span class="badge badge-warn">${escHtml(r.notes)}</span>` : ''}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ── Save parsed rows to JSON file for resuming later
+function saveAsJson() {
+  if (pdfParsedRows.length === 0) { showToast('No records to save.', 'warn'); return; }
+  const json = JSON.stringify({ savedAt: new Date().toISOString(), total: pdfParsedRows.length, rows: pdfParsedRows }, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `voters_${new Date().toISOString().slice(0,10)}_${pdfParsedRows.length}records.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`Saved ${pdfParsedRows.length.toLocaleString()} records to JSON.`, 'success');
+}
+
+// ── Load previously saved JSON to resume import
+function loadResumeJson(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.rows || !Array.isArray(data.rows)) throw new Error('Invalid format');
+      pdfParsedRows = data.rows;
+      // Show in preview
+      renderPdfPreview();
+      document.getElementById('pdf-form-actions').style.display = 'flex';
+      document.getElementById('btn-pdf-import').innerHTML =
+        `<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg> Import ${pdfParsedRows.length.toLocaleString()} Records`;
+      showToast(`Loaded ${pdfParsedRows.length.toLocaleString()} records from JSON. Ready to import!`, 'success');
+    } catch(err) {
+      showToast('Could not read JSON: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+
+// ── Make a stable dedup key from a voter record
+function voterDedupKey(r) {
+  return (r.lastname + '|' + r.firstname + '|' + r.precinct).toUpperCase().replace(/\s+/g, '');
+}
+
+async function doPdfImport() {
+  if (pdfParsedRows.length === 0) return;
+  const btn = document.getElementById('btn-pdf-import');
+  btn.disabled = true;
+
+  const BATCH_SIZE = 100;
+  const DELAY_MS   = 300;
+  const MAX_RETRY  = 3;
+  const addedBy    = currentUser?.uid || 'pdf-import';
+  const sleep      = ms => new Promise(r => setTimeout(r, ms));
+
+  // ── Step 1: fetch all existing voter keys from Firestore to prevent duplicates
+  const progressBox   = document.getElementById('pdf-import-progress');
+  const progressFiles = document.getElementById('pdf-progress-files');
+  progressBox.classList.add('show');
+  progressFiles.innerHTML = `
+    <div class="progress-file">
+      <div class="progress-file-name" id="imp-status">Checking for existing records…</div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="imp-bar" style="width:0%"></div></div>
+      <div class="progress-status" id="imp-sub">Loading existing voters from database…</div>
+    </div>`;
+
+  let existingKeys = new Set();
+  try {
+    btn.textContent = 'Checking duplicates…';
+    // Fetch only the fields we need for dedup — lastname, firstname, precinct
+    const snap = await db.collection('voters').select('lastname','firstname','precinct').get();
+    snap.forEach(doc => {
+      const d = doc.data();
+      existingKeys.add(voterDedupKey(d));
+    });
+    document.getElementById('imp-sub').textContent = `Found ${existingKeys.size.toLocaleString()} existing records in database.`;
+  } catch(e) {
+    // If fetch fails just warn and continue without dedup
+    document.getElementById('imp-sub').textContent = 'Could not check existing records — will import all.';
+    await sleep(1000);
+  }
+
+  // ── Step 2: filter out duplicates
+  const before   = pdfParsedRows.length;
+  const toImport = pdfParsedRows.filter(r => !existingKeys.has(voterDedupKey(r)));
+  const skipped  = before - toImport.length;
+
+  if (skipped > 0) {
+    showToast(`Skipping ${skipped.toLocaleString()} duplicates already in database.`, 'warn');
+  }
+
+  if (toImport.length === 0) {
+    document.getElementById('imp-status').textContent = '✓ Nothing to import — all records already exist.';
+    document.getElementById('imp-bar').classList.add('done');
+    document.getElementById('imp-bar').style.width = '100%';
+    document.getElementById('imp-sub').textContent = `All ${before.toLocaleString()} records were already in the database.`;
+    btn.textContent = 'Already imported ✓';
+    return;
+  }
+
+  const total = toImport.length;
+  let imported = 0;
+
+  function setProgress(done, msg, sub) {
+    const pct = Math.round(done / total * 100);
+    document.getElementById('imp-bar').style.width = pct + '%';
+    if (msg) document.getElementById('imp-status').textContent = msg;
+    if (sub) document.getElementById('imp-sub').textContent = sub;
+    btn.textContent = `Importing… ${done.toLocaleString()} / ${total.toLocaleString()}`;
+  }
+
+  async function commitWithRetry(batch, attempt = 1) {
+    try {
+      await batch.commit();
+    } catch (err) {
+      if (attempt < MAX_RETRY) {
+        const wait = attempt * 1500;
+        setProgress(imported, `Retrying batch (attempt ${attempt+1})…`, `Waiting ${wait/1000}s…`);
+        await sleep(wait);
+        return commitWithRetry(batch, attempt + 1);
+      }
+      throw err;
+    }
+  }
+
+  // ── Step 3: import in batches
+  try {
+    setProgress(0, `Importing ${total.toLocaleString()} new records…`, `0 / ${total.toLocaleString()} (${skipped} duplicates skipped)`);
+
+    for (let i = 0; i < total; i += BATCH_SIZE) {
+      const chunk = toImport.slice(i, i + BATCH_SIZE);
+      const batch = db.batch();
+      for (const r of chunk) {
+        const ref = db.collection('voters').doc();   // auto-ID avoids name collision overwriting
+        batch.set(ref, {
+          name:        r.name,
+          lastname:    r.lastname,
+          firstname:   r.firstname,
+          middlename:  r.middlename,
+          suffix:      r.suffix || '',
+          birthday:    '',
+          civilStatus: '',
+          phone:       '',
+          phone2:      '',
+          address:     r.address,
+          barangay:    r.barangay,
+          precinct:    r.precinct,
+          voterId:     r.voterId,
+          team:        '',
+          notes:       r.notes || '',
+          addedBy,
+          addedAt:     firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: false });
+      }
+
+      setProgress(imported, `Importing batch ${Math.floor(i/BATCH_SIZE)+1} of ${Math.ceil(total/BATCH_SIZE)}…`,
+        `${imported.toLocaleString()} / ${total.toLocaleString()} records`);
+
+      await commitWithRetry(batch);
+      imported += chunk.length;
+      setProgress(imported, `Importing…`, `${imported.toLocaleString()} / ${total.toLocaleString()} records`);
+      await sleep(DELAY_MS);
+    }
+
+    document.getElementById('imp-bar').classList.add('done');
+    document.getElementById('imp-status').textContent = `✓ Done!`;
+    document.getElementById('imp-sub').textContent =
+      `${imported.toLocaleString()} imported${skipped > 0 ? `, ${skipped.toLocaleString()} duplicates skipped` : ''}`;
+    btn.textContent = 'Import Complete ✓';
+    showToast(`✓ ${imported.toLocaleString()} imported, ${skipped.toLocaleString()} duplicates skipped.`, 'success');
+    setTimeout(() => { clearPdfImport(); loadVoters(); }, 2500);
+
+  } catch (err) {
+    document.getElementById('imp-bar').classList.add('error');
+    document.getElementById('imp-status').textContent = `Stopped at ${imported.toLocaleString()} records`;
+    document.getElementById('imp-sub').textContent = err.message;
+
+    // Trim already-imported so Resume picks up exactly where we stopped
+    pdfParsedRows = toImport.slice(imported);
+
+    const isQuota = (err.message || '').toLowerCase().includes('quota') || err.code === 'resource-exhausted';
+    if (isQuota) {
+      document.getElementById('quota-warn').style.display = 'flex';
+      showToast(`Quota hit at ${imported.toLocaleString()}. Auto-saving remaining ${pdfParsedRows.length.toLocaleString()} records…`, 'warn');
+      setTimeout(() => saveAsJson(), 800);
+    } else {
+      showToast(`Stopped at ${imported.toLocaleString()} — ${err.message}`, 'error');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg> Resume (${pdfParsedRows.length.toLocaleString()} remaining)`;
+  }
+}
+
+function clearPdfImport() {
+  pdfFiles = [];
+  pdfParsedRows = [];
+  document.getElementById('pdf-queue').innerHTML = '';
+  document.getElementById('pdf-preview-area').innerHTML = '';
+  document.getElementById('pdf-import-progress').classList.remove('show');
+  document.getElementById('pdf-progress-files').innerHTML = '';
+  document.getElementById('pdf-form-actions').style.display = 'none';
+  document.getElementById('pdf-file-input').value = '';
+  document.getElementById('quota-warn').style.display = 'none';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('voter-modal').classList.contains('open')) closeVoterModal();
+    document.getElementById('team-modal').classList.remove('open');
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// MOBILE SIDEBAR / DRAWER
+// ═══════════════════════════════════════════════════════════
+function toggleSidebar() {
+  const drawer = document.getElementById('sidebar-drawer');
+  const overlay = document.getElementById('sidebar-overlay');
+  const open = drawer.classList.toggle('open');
+  overlay.classList.toggle('open', open);
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar-drawer').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ═══════════════════════════════════════════════════════════
+// MOBILE CARD LIST RENDERER
+// ═══════════════════════════════════════════════════════════
+function renderMobileCards(voters, startIndex) {
+  const list = document.getElementById('voter-card-list');
+  if (!list) return;
+  if (voters.length === 0) {
+    list.innerHTML = '<div class="loading-row">No matching voters found.</div>';
+    return;
+  }
+  list.innerHTML = voters.map((v, i) => {
+    const num = startIndex + i + 1;
+    const initials = ((v.lastname || '').charAt(0) + (v.firstname || '').charAt(0)).toUpperCase() || '#';
+    const missingPhone = !v.phone && !v.phone2;
+    return `<div class="voter-card" onclick="openVoterModal('${escHtml(v.id)}')">
+      <div class="voter-card-avatar">${escHtml(initials)}</div>
+      <div class="voter-card-body">
+        <div class="voter-card-name">${escHtml(v.name || '—')}</div>
+        <div class="voter-card-meta">${escHtml(v.address || '—')}</div>
+        <div class="voter-card-tags">
+          ${v.barangay ? `<span class="voter-card-tag accent">${escHtml(v.barangay)}</span>` : ''}
+          ${v.precinct ? `<span class="voter-card-tag">${escHtml(v.precinct)}</span>` : ''}
+          ${v.phone ? `<span class="voter-card-tag">${escHtml(v.phone)}</span>` : ''}
+          ${missingPhone ? `<span class="voter-card-tag" style="background:var(--warn-bg);color:var(--warn)">📵 No Phone</span>` : ''}
+        </div>
+      </div>
+      <div class="voter-card-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>`;
+  }).join('');
+}
+</script>
+
+<!--
+═══════════════════════════════════════════════════════════════════
+FIRESTORE SECURITY RULES — paste into Firebase Console > Firestore > Rules
+═══════════════════════════════════════════════════════════════════
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function getUserData() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function isAdmin() { return isSignedIn() && getUserData().role == 'admin'; }
+    function isOfficial() { return isSignedIn() && getUserData().role == 'official'; }
+    function ownsBarangay(barangay) { return isOfficial() && getUserData().barangay == barangay; }
+
+    match /voters/{voterId} {
+      allow read:   if isAdmin() || ownsBarangay(resource.data.barangay) || (isOfficial() && getUserData().barangay == null);
+      allow create: if isAdmin() || isOfficial();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    match /users/{uid} {
+      allow read:   if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if isAdmin();
+      allow update: if isAdmin() || request.auth.uid == uid;
+      allow delete: if isAdmin();
+    }
+    match /audit_logs/{logId} {
+      allow read:   if isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+  }
+}
+
+═══════════════════════════════════════════════════════════════════
+VOTER DOCUMENT STRUCTURE (voters collection)
+═══════════════════════════════════════════════════════════════════
+  name        (string)  — "SURNAME, FIRSTNAME MIDDLENAME SUFFIX"
+  lastname    (string)
+  firstname   (string)
+  middlename  (string)
+  suffix      (string)  — JR, SR, III, etc.
+  birthday    (string)  — YYYY-MM-DD
+  civilStatus (string)  — Single, Married, etc.
+  phone       (string)
+  phone2      (string)
+  address     (string)
+  barangay    (string)  — e.g. "BF Homes"
+  precinct    (string)  — e.g. "0470A"
+  voterId     (string)  — PCVL or voter ID number
+  team        (string)  — assigned team or leader name
+  notes       (string)
+  addedBy     (string)  — UID of user who added the record
+  addedAt     (timestamp)
+
+USER DOCUMENT STRUCTURE (users collection, doc ID = Firebase Auth UID)
+  name        (string)
+  initials    (string)  — 2–3 letters
+  email       (string)
+  role        (string)  — "admin" or "official"
+  barangay    (string)  — assigned barangay, null for admins (all access)
+  phone       (string)
+  createdBy   (string)  — UID of admin who created the account
+  createdAt   (timestamp)
+═══════════════════════════════════════════════════════════════════
+-->
+
+</body>
+</html>
