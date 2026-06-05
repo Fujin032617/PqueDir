@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -151,15 +153,8 @@
 
     /* ══ STATS ══ */
     .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.25rem; }
-    @media (min-width: 900px) { .stats-grid { grid-template-columns: repeat(5, 1fr); } }
     .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; transition: box-shadow 0.15s; }
-    .stat-card.clickable { cursor: pointer; }
-    .stat-card.clickable:hover { box-shadow: var(--shadow); border-color: var(--border2); }
-    .stat-card.warn-card { border-left: 3px solid var(--warn); }
-    .stat-card.warn-card .stat-value { color: var(--warn); }
-    .stat-card.warn-card .stat-label { color: var(--warn); }
-    .missing-badge { display: inline-block; font-size: 9px; font-weight: 700; padding: 2px 5px; border-radius: 4px; background: var(--warn-bg); color: var(--warn); letter-spacing: 0.04em; margin-left: 4px; vertical-align: middle; }
-    .voter-row.missing-info { border-left: 2px solid var(--warn); }
+    .stat-card:hover { box-shadow: var(--shadow); }
     .stat-label { font-size: 11px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
     .stat-value { font-size: 24px; font-weight: 600; color: var(--text); line-height: 1; font-variant-numeric: tabular-nums; }
     .stat-sub { font-size: 11px; color: var(--hint); margin-top: 4px; }
@@ -592,20 +587,23 @@
           <div class="stat-card"><div class="stat-label">Barangays</div><div class="stat-value" id="stat-barangays">—</div><div class="stat-sub">covered</div></div>
           <div class="stat-card"><div class="stat-label">Precincts</div><div class="stat-value" id="stat-precincts">—</div><div class="stat-sub">total precincts</div></div>
           <div class="stat-card"><div class="stat-label">Results</div><div class="stat-value" id="stat-results">—</div><div class="stat-sub">matching search</div></div>
-          <div class="stat-card warn-card clickable" title="Click to filter voters with no phone" onclick="filterMissing('phone')"><div class="stat-label">📵 No Phone</div><div class="stat-value" id="stat-no-phone">—</div><div class="stat-sub">need to collect</div></div>
         </div>
         <div class="toolbar">
           <div class="search-wrap">
             <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="search" id="search-input" placeholder="Search name, address, phone…" oninput="handleSearch()" autocomplete="off" />
+            <input type="search" id="search-input" placeholder="Search by first name, last name, or phone…" oninput="handleSearch()" autocomplete="off" />
           </div>
           <select id="barangay-filter" onchange="handleSearch()"><option value="">All barangays</option></select>
           <select id="precinct-filter" onchange="handleSearch()"><option value="">All precincts</option></select>
           <select id="team-filter" onchange="handleSearch()"><option value="">All teams</option></select>
-          <select id="missing-filter" onchange="handleSearch()">
-            <option value="">All records</option>
-            <option value="phone">📵 Missing phone</option>
+          <select id="phone-filter" onchange="handleSearch()">
+            <option value="">All voters</option>
+            <option value="no-phone">No phone number</option>
           </select>
+        </div>
+        <div class="alert alert-info" id="search-scope-notice" style="display:none;margin-bottom:0.75rem">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span>Text search is scoped to this page only. Use the barangay/precinct filters to narrow results server-side.</span>
         </div>
         <div class="table-card">
           <!-- Desktop table -->
@@ -694,6 +692,10 @@
             <div class="alert alert-info">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               <span>Only <strong>lastname, firstname, address, barangay, and precinct</strong> are required.</span>
+            </div>
+            <div class="alert alert-info" id="bulk-barangay-notice" style="display:none">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span></span>
             </div>
             <div class="field"><label>Paste data here</label><textarea class="csv-area" id="bulk-input" placeholder="DELA CRUZ&#9;JUAN&#9;SANTOS&#9;&#9;1985-03-15&#9;Married&#9;09171234567&#9;&#9;BLK 5 LOT 8 BAYABAS ST&#9;BF Homes&#9;0470A&#9;&#9;Team A&#9;" oninput="parseBulkPreview()"></textarea></div>
             <div id="bulk-preview-area"></div>
@@ -824,7 +826,7 @@
       <div style="border-top:1px solid var(--border); padding-top:1rem;">
         <div class="register-section-title" style="margin-bottom:0.75rem">🏛 Government Aid Received</div>
         <div class="aid-list" id="aid-list"></div>
-        <div style="margin-top:1rem;">
+        <div id="aid-add-section" style="margin-top:1rem;">
           <div style="font-size:11px;font-weight:600;color:var(--hint);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Add Aid Entry</div>
           <div class="aid-add-row">
             <input type="text" id="aid-program" placeholder="Program name (e.g. 4Ps, AICS, DSWD Ayuda…)" style="flex:1;min-width:150px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:13px;color:var(--text);background:var(--surface);outline:none;-webkit-appearance:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" />
@@ -990,11 +992,39 @@ const auth = firebase.auth();
 // STATE
 // ═══════════════════════════════════════════════════════════
 let currentUser    = null;
-let allVoters      = [];
-let filteredVoters = [];
-let currentPage    = 1;
+
+// Central permission check — admins always have everything,
+// officials only get what was granted when their account was created.
+function hasPerm(key) {
+  if (!currentUser) return false;
+  if (currentUser.role === 'admin') return true;
+  return !!(currentUser.permissions && currentUser.permissions[key]);
+}
+// ── Paginated voter state (replaces flat allVoters array) ──
+let currentPage    = 1;        // UI display page number (1-based)
 let bulkRows       = [];
 const PAGE_SIZE    = 50;
+
+// Server-side pagination cursors
+let _pageStack     = [];       // stack of first-doc cursors, one per visited page
+let _lastDoc       = null;     // last doc on current page (for "next" cursor)
+let _totalVoters   = 0;        // from /meta/summary
+let _currentFilters = { barangay: '', precinct: '', team: '', q: '', rawQ: '', phoneFilter: '' };
+let _votersLoading = false;    // guard against concurrent loadVoters() calls
+
+// In-memory page cache: the 50 docs currently displayed
+let currentPageVoters = [];
+
+// Legacy aliases so untouched code (modal, aid, etc.) still works
+// filteredVoters points at currentPageVoters; allVoters is a no-op shim
+Object.defineProperty(window, 'filteredVoters', {
+  get() { return currentPageVoters; },
+  set(v) { currentPageVoters = v; }
+});
+Object.defineProperty(window, 'allVoters', {
+  get() { return currentPageVoters; },
+  set() { /* no-op — we no longer hold all docs in memory */ }
+});
 
 // ═══════════════════════════════════════════════════════════
 // INIT
@@ -1017,13 +1047,14 @@ async function loadUserProfile(firebaseUser) {
     if (doc.exists) {
       const d = doc.data();
       currentUser = {
-        uid:      firebaseUser.uid,
-        email:    firebaseUser.email,
-        name:     d.name || firebaseUser.email,
-        initials: d.initials || firebaseUser.email.substring(0, 2).toUpperCase(),
-        role:     d.role || 'official',
-        barangay: d.barangay || null,
-        phone:    d.phone || ''
+        uid:         firebaseUser.uid,
+        email:       firebaseUser.email,
+        name:        d.name || firebaseUser.email,
+        initials:    d.initials || firebaseUser.email.substring(0, 2).toUpperCase(),
+        role:        d.role || 'official',
+        barangay:    d.barangay || null,
+        phone:       d.phone || '',
+        permissions: d.permissions || {}
       };
     } else {
       // First time: create user doc — only grant admin if no other users exist yet
@@ -1033,12 +1064,15 @@ async function loadUserProfile(firebaseUser) {
         if (existing.empty) firstRole = 'admin';
       } catch(e) { /* default to official if check fails */ }
       currentUser = {
-        uid:      firebaseUser.uid,
-        email:    firebaseUser.email,
-        name:     firebaseUser.email,
-        initials: firebaseUser.email.substring(0, 2).toUpperCase(),
-        role:     firstRole,
-        barangay: null
+        uid:         firebaseUser.uid,
+        email:       firebaseUser.email,
+        name:        firebaseUser.email,
+        initials:    firebaseUser.email.substring(0, 2).toUpperCase(),
+        role:        firstRole,
+        barangay:    null,
+        // FIX: always include permissions so hasPerm() and Firestore security
+        // rules (userData().permissions[key]) never hit a null-reference error.
+        permissions: {}
       };
       await db.collection('users').doc(firebaseUser.uid).set(currentUser);
     }
@@ -1073,15 +1107,24 @@ async function handleLogin() {
 }
 
 function handleLogout() {
-  _clearCache();
   auth.signOut();
-  currentUser = null;
-  allVoters = [];
-  filteredVoters = [];
+  currentUser         = null;
+  currentPageVoters   = [];
+  _pageStack          = [];
+  _lastDoc            = null;
+  _totalVoters        = 0;
+  _votersLoading      = false;
+  _currentFilters     = { barangay: '', precinct: '', team: '', q: '' };
   document.getElementById('app-page').classList.remove('active');
   document.getElementById('login-page').classList.add('active');
   document.getElementById('email').value    = '';
   document.getElementById('password').value = '';
+  // Reset login button in case it was left disabled/mid-flight
+  const btn = document.getElementById('login-btn');
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Sign in`;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1097,23 +1140,29 @@ function showApp() {
   roleBadge.textContent = currentUser.role === 'admin' ? 'Super Admin' : 'Official';
   if (currentUser.role === 'admin') roleBadge.classList.add('admin');
 
-  if (currentUser.role === 'admin') {
-    document.getElementById('sb-admin-section').style.display = 'block';
-    document.getElementById('admin-toolbar-btns').style.display = 'flex';
-  }
+  // Gate UI sections by permissions
+  const isAdmin = currentUser.role === 'admin';
+
+  // Admin toolbar (Add/Import buttons)
+  const adminToolbar = document.getElementById('admin-toolbar-btns');
+  if (adminToolbar) adminToolbar.style.display = (hasPerm('addVoters') || hasPerm('bulkImport')) ? 'flex' : 'none';
+
+  // Admin sidebar section (Register + Team)
+  const sbAdmin = document.getElementById('sb-admin-section');
+  if (sbAdmin) sbAdmin.style.display = (hasPerm('addVoters') || hasPerm('bulkImport') || hasPerm('viewTeam')) ? 'block' : 'none';
 
   loadVoters();
-  if (currentUser.role === 'admin') loadTeamMembers();
+  if (isAdmin || hasPerm('viewTeam')) loadTeamMembers();
 
-  // Show admin bottom nav tabs on mobile
-  if (currentUser.role === 'admin') {
-    const bnavReg = document.getElementById('bnav-register');
-    const bnavTeam = document.getElementById('bnav-team');
-    if (bnavReg) bnavReg.style.display = 'flex';
-    if (bnavTeam) bnavTeam.style.display = 'flex';
-    const drawerAdmin = document.getElementById('drawer-sb-admin-section');
-    if (drawerAdmin) drawerAdmin.style.display = 'block';
-  }
+  // Mobile bottom nav
+  const bnavReg  = document.getElementById('bnav-register');
+  const bnavTeam = document.getElementById('bnav-team');
+  if (bnavReg)  bnavReg.style.display  = (hasPerm('addVoters') || hasPerm('bulkImport')) ? 'flex' : 'none';
+  if (bnavTeam) bnavTeam.style.display = (isAdmin || hasPerm('viewTeam')) ? 'flex' : 'none';
+
+  // Drawer admin section
+  const drawerAdmin = document.getElementById('drawer-sb-admin-section');
+  if (drawerAdmin) drawerAdmin.style.display = (hasPerm('addVoters') || hasPerm('bulkImport') || hasPerm('viewTeam')) ? 'block' : 'none';
 
 }
 
@@ -1138,6 +1187,34 @@ function showSection(name) {
 
   const nav = document.getElementById('nav-' + name);
   if (nav) nav.classList.add('active');
+
+  // Re-apply active state on the selected barangay sidebar items (if any)
+  if (name === 'voters' && _currentFilters.barangay) {
+    document.querySelectorAll(`[data-barangay="${CSS.escape(_currentFilters.barangay)}"]`)
+      .forEach(el => el.classList.add('active'));
+  }
+
+  // When entering register section, show only permitted tabs
+  if (name === 'register') {
+    const tabSingle = document.querySelector('.panel-tab[onclick*="single"]');
+    const tabBulk   = document.querySelector('.panel-tab[onclick*="bulk"]');
+    const tabPdf    = document.querySelector('.panel-tab[onclick*="pdf"]');
+    if (tabSingle) tabSingle.style.display = hasPerm('addVoters')  ? '' : 'none';
+    if (tabBulk)   tabBulk.style.display   = hasPerm('bulkImport') ? '' : 'none';
+    if (tabPdf)    tabPdf.style.display     = hasPerm('bulkImport') ? '' : 'none';
+    // Auto-switch to first visible tab
+    if      (hasPerm('addVoters'))  switchTab('single');
+    else if (hasPerm('bulkImport')) switchTab('bulk');
+
+    // Auto-fill barangay in the single form if the logged-in user has an
+    // assigned barangay. Admins get no pre-fill (they cover all barangays).
+    const assignedBrgy = currentUser?.barangay || '';
+    const fBrgy = document.getElementById('f-barangay');
+    if (fBrgy && assignedBrgy && !fBrgy.value) fBrgy.value = assignedBrgy;
+
+    // Show/hide the bulk CSV barangay auto-fill notice
+    _updateBulkBarangayNotice();
+  }
 }
 
 let _pdfJsLoaded = false;
@@ -1152,322 +1229,559 @@ function switchTab(tab) {
     const el = document.getElementById('tab-' + t);
     if (el) el.classList.toggle('active', t === tab);
   });
+  // Update the bulk CSV barangay auto-fill notice whenever we switch tabs
+  if (tab === 'bulk') _updateBulkBarangayNotice();
+
   // Lazy-load PDF.js only when the PDF tab is first opened
   if (tab === 'pdf' && !_pdfJsLoaded) {
-    _pdfJsLoaded = true;
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    script.onload = () => initPdfWorker();
+    script.onload = () => { _pdfJsLoaded = true; initPdfWorker(); };
+    script.onerror = () => { showToast('Failed to load PDF.js. Please try again.', 'error'); };
     document.head.appendChild(script);
   }
 }
 
 // ═══════════════════════════════════════════════════════════
-// LOAD VOTERS
-// ─ Serves from localStorage cache first (instant render), then
-//   fetches fresh data from Firestore in the background.
-//
-// Firestore composite indexes required (create in Firebase Console
-// → Firestore → Indexes → Composite):
-//   Collection: voters  |  Fields: barangay ASC, name ASC
-//   (Needed for the official-role where+orderBy query.)
-//   The admin query only uses orderBy('name') — single-field
-//   indexes are created automatically by Firestore.
+// LOAD VOTERS — Phase 1: meta doc (1 read) + first page (50 reads)
 // ═══════════════════════════════════════════════════════════
-function _cacheKey() {
-  // Per-user cache so different officials don't share stale data.
-  return `voters_cache_${currentUser.uid}`;
-}
-
-function _saveCache(voters) {
-  try {
-    localStorage.setItem(_cacheKey(), JSON.stringify(voters));
-  } catch(e) {
-    // localStorage may be full or unavailable — fail silently.
-    console.warn('Could not save voters cache:', e);
-  }
-}
-
-function _loadCache() {
-  try {
-    const raw = localStorage.getItem(_cacheKey());
-    return raw ? JSON.parse(raw) : null;
-  } catch(e) {
-    return null;
-  }
-}
-
-function _clearCache() {
-  try { localStorage.removeItem(_cacheKey()); } catch(e) {}
-}
-
 async function loadVoters() {
-  // ── 1. Serve cache immediately if available (instant render) ──
-  const cached = _loadCache();
-  if (cached && cached.length > 0) {
-    allVoters = cached;
-    initUI();
-    // Show a subtle indicator that a background refresh is running
-    document.getElementById('voter-list').insertAdjacentHTML(
-      'afterbegin',
-      '<div id="cache-refresh-banner" style="padding:6px 16px;font-size:11px;color:var(--hint);background:var(--bg);border-bottom:1px solid var(--border)">⟳ Refreshing from server…</div>'
-    );
-  } else {
-    document.getElementById('voter-list').innerHTML = '<div class="loading-row">Loading voter records…</div>';
-  }
+  if (_votersLoading) return;   // prevent double-calls
+  _votersLoading = true;
 
-  // ── 2. Always fetch fresh data from Firestore ──
+  // Reset ALL pagination state synchronously before any await
+  currentPage     = 1;
+  _pageStack      = [];
+  _lastDoc        = null;
+  _currentFilters = { barangay: '', precinct: '', team: '', q: '', rawQ: '', phoneFilter: '' };
+
+  document.getElementById('voter-list').innerHTML = '<div class="loading-row">Loading voter records…</div>';
+
+  // Reset search/filter controls to blank
+  const si = document.getElementById('search-input');     if (si) si.value = '';
+  const bf = document.getElementById('barangay-filter');  if (bf) bf.value = '';
+  const pf = document.getElementById('precinct-filter');  if (pf) pf.value = '';
+  const tf = document.getElementById('team-filter');      if (tf) tf.value = '';
+  const phf = document.getElementById('phone-filter');    if (phf) phf.value = '';
+
   try {
-    let query = db.collection('voters');
-    if (currentUser.role !== 'admin' && currentUser.barangay) {
-      // Composite index: barangay ASC + name ASC
-      query = query.where('barangay', '==', currentUser.barangay).orderBy('name');
-    } else {
-      // Single-field index (auto-created by Firestore)
-      query = query.orderBy('name');
-    }
-    const snap = await query.get();
-    allVoters = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    _saveCache(allVoters);
-    initUI();
+    // ── 1 read: stats + filter options from /meta/summary ──
+    let meta = {};
+    try {
+      const metaDoc = await db.collection('meta').doc('summary').get();
+      if (metaDoc.exists) meta = metaDoc.data();
+    } catch(e) { /* meta doc missing — degrade gracefully */ }
+
+    const barangays           = meta.barangays           || [];
+    const precincts           = meta.precincts           || [];
+    const teams               = meta.teams               || [];
+    const barangayCounts      = meta.barangayCounts      || {};
+    const precinctsByBarangay = meta.precinctsByBarangay || {};
+    // Store globally so barangay filter can repopulate precincts dynamically
+    window._precinctsByBarangay = precinctsByBarangay;
+    window._allPrecincts        = precincts;
+
+    // Scope non-admins to their assigned barangay
+    const scopedBarangays = (currentUser.role !== 'admin' && currentUser.barangay)
+      ? barangays.filter(b => b === currentUser.barangay)
+      : barangays;
+
+    _totalVoters = meta.totalVoters || 0;
+
+    // ── Populate filter dropdowns from meta ──
+    _initFilters(scopedBarangays, precincts, teams);
+
+    // ── Load first page of voters (50 reads) ──
+    // Do this BEFORE updating stats so we can fall back to live count if meta is empty
+    await _loadPage('first');
+
+    // ── Update stats — prefer meta, fall back to live page count hint ──
+    const displayTotal = _totalVoters || (currentPageVoters.length === PAGE_SIZE ? '50+' : currentPageVoters.length);
+    document.getElementById('stat-total').textContent     = typeof displayTotal === 'number' ? displayTotal.toLocaleString() : displayTotal;
+    document.getElementById('stat-barangays').textContent = scopedBarangays.length || (barangays.length || '—');
+    document.getElementById('stat-precincts').textContent = precincts.length || '—';
+    document.getElementById('sb-total').textContent       = typeof displayTotal === 'number' ? displayTotal.toLocaleString() : displayTotal;
+    const drawerTotal = document.getElementById('drawer-sb-total');
+    if (drawerTotal) drawerTotal.textContent = typeof displayTotal === 'number' ? displayTotal.toLocaleString() : displayTotal;
+
+    // ── Populate sidebar barangay list from meta ──
+    _initSidebarBarangays(scopedBarangays, barangayCounts);
+
   } catch (err) {
-    // If the composite index doesn't exist yet, fall back to client-side sort
-    if (err.code === 'failed-precondition' || (err.message && err.message.includes('index'))) {
-      console.warn('Firestore index missing — falling back to client-side sort. Create the composite index to fix this.', err);
-      try {
-        let query2 = db.collection('voters');
-        if (currentUser.role !== 'admin' && currentUser.barangay) {
-          query2 = query2.where('barangay', '==', currentUser.barangay);
-        }
-        const snap2 = await query2.get();
-        allVoters = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
-        allVoters.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        _saveCache(allVoters);
-        initUI();
-      } catch(err2) {
-        if (!cached) {
-          document.getElementById('voter-list').innerHTML = `<div class="loading-row" style="color:var(--danger)">Error loading data: ${escHtml(err2.message)}</div>`;
-        }
-        showToast('Failed to load voters: ' + err2.message, 'error');
-      }
-    } else {
-      // For other errors, if we already rendered from cache, just show a toast
-      if (!cached) {
-        document.getElementById('voter-list').innerHTML = `<div class="loading-row" style="color:var(--danger)">Error loading data: ${escHtml(err.message)}</div>`;
-      }
-      showToast('Failed to refresh voters: ' + err.message, 'error');
-    }
+    document.getElementById('voter-list').innerHTML =
+      `<div class="loading-row" style="color:var(--danger)">Error loading data: ${escHtml(err.message)}</div>`;
+    showToast('Failed to load voters: ' + err.message, 'error');
   } finally {
-    // Remove the "refreshing" banner after fetch completes (success or fail)
-    const banner = document.getElementById('cache-refresh-banner');
-    if (banner) banner.remove();
+    _votersLoading = false;
   }
 }
 
-function initUI() {
-  const barangays = [...new Set(allVoters.map(v => v.barangay).filter(Boolean))].sort();
-  const precincts = [...new Set(allVoters.map(v => v.precinct).filter(Boolean))].sort();
-  const teams     = [...new Set(allVoters.map(v => v.team).filter(Boolean))].sort();
+// ── Build a Firestore query with current filters applied ──
+// NOTE: Firestore requires composite indexes for multi-field WHERE clauses.
+// To avoid index errors, we apply only ONE additional filter server-side
+// (barangay > precinct > team priority) and handle the second one client-side.
+// ── Build a base Firestore query with equality filters (barangay/precinct/team) ──
+// Returns a query object ready for prefix range or plain orderBy to be appended.
+function _buildBaseQuery() {
+  const { barangay, precinct, team } = _currentFilters;
+  let q = db.collection('voters');
 
-  document.getElementById('stat-total').textContent     = allVoters.length.toLocaleString();
-  document.getElementById('stat-barangays').textContent = barangays.length;
-  document.getElementById('stat-precincts').textContent = precincts.length;
-  document.getElementById('sb-total').textContent       = allVoters.length;
+  // Officials are locked to their assigned barangay
+  const scopedBrgy = (currentUser.role !== 'admin' && currentUser.barangay)
+    ? currentUser.barangay : barangay;
 
-  // Missing info counts
-  const noPhone  = allVoters.filter(v => !v.phone && !v.phone2).length;
-  document.getElementById('stat-no-phone').textContent = noPhone.toLocaleString();
+  if (scopedBrgy) {
+    q = q.where('barangay', '==', scopedBrgy);
+    if (precinct) q = q.where('precinct', '==', precinct);
+    else if (team) q = q.where('team', '==', team);
+  } else {
+    if (precinct) q = q.where('precinct', '==', precinct);
+    else if (team) q = q.where('team', '==', team);
+  }
+  return q;
+}
 
-  // Barangay filter
+// ── Build prefix range bounds for a search term ──
+function _prefixBounds(raw) {
+  const upper = raw.toUpperCase();
+  const end   = upper.slice(0, -1) + String.fromCharCode(upper.charCodeAt(upper.length - 1) + 1);
+  return { upper, end };
+}
+
+// _buildQuery is kept for the no-search case (dropdown filters only, plain pagination)
+function _buildQuery() {
+  const { rawQ } = _currentFilters;
+  const base = _buildBaseQuery();
+  if (rawQ) {
+    // When searching, _loadPage uses _buildSearchQueries() instead — this path
+    // is only hit by legacy callers; just return a lastname prefix query.
+    const { upper, end } = _prefixBounds(rawQ);
+    return base.orderBy('lastname').startAt(upper).endAt(end).limit(PAGE_SIZE);
+  }
+  return base.orderBy(firebase.firestore.FieldPath.documentId()).limit(PAGE_SIZE);
+}
+
+// ── Fetch a page of voter docs from Firestore ──
+// When a search term is present, runs TWO parallel prefix queries:
+//   1. lastname prefix  e.g. lastname >= "DELA" && lastname < "DELB"
+//   2. firstname prefix e.g. firstname >= "DELA" && firstname < "DELB"
+//   3. phone prefix     e.g. phone >= "0917" && phone < "0918"
+// Results are merged + deduplicated by doc ID so typing any part of a
+// name (first or last) or a phone prefix finds the right voter.
+// Each query reads at most PAGE_SIZE docs = very low Firestore usage.
+async function _loadPage(direction) {
+  try {
+    const { rawQ } = _currentFilters;
+
+    let pageDocs;
+
+    if (rawQ) {
+      // ── SEARCH MODE: parallel prefix queries on lastname, firstname, phone ──
+      const { upper, end } = _prefixBounds(rawQ);
+      const base = _buildBaseQuery();
+
+      // Detect if input looks like a phone number (digits / starts with 0 or +)
+      const looksLikePhone = /^[0-9+]/.test(rawQ.trim());
+
+      const queries = [];
+      if (looksLikePhone) {
+        // Phone prefix search
+        queries.push(
+          base.orderBy('phone').startAt(rawQ).endAt(rawQ + '\uf8ff').limit(PAGE_SIZE).get()
+        );
+      } else {
+        // Name prefix search: lastname AND firstname in parallel
+        queries.push(
+          base.orderBy('lastname').startAt(upper).endAt(end).limit(PAGE_SIZE).get()
+        );
+        queries.push(
+          base.orderBy('firstname').startAt(upper).endAt(end).limit(PAGE_SIZE).get()
+        );
+      }
+
+      const snaps = await Promise.all(queries);
+
+      // Merge and deduplicate by doc ID
+      const seen = new Set();
+      pageDocs = [];
+      for (const snap of snaps) {
+        for (const doc of snap.docs) {
+          if (!seen.has(doc.id)) {
+            seen.add(doc.id);
+            pageDocs.push({ id: doc.id, ...doc.data() });
+          }
+        }
+      }
+
+      // In search mode we don't do cursor pagination (merged results can't cursor reliably)
+      // Just show all merged results sorted by name — typically well under PAGE_SIZE*2
+      _lastDoc  = null;
+      _pageStack = [];
+      currentPage = 1;
+
+    } else {
+      // ── BROWSE MODE: standard single-query cursor pagination ──
+      let q = _buildQuery();
+      if (direction === 'next' && _lastDoc) {
+        q = q.startAfter(_lastDoc);
+      } else if (direction === 'prev' && _pageStack.length > 1) {
+        _pageStack.pop();
+        const prevCursor = _pageStack[_pageStack.length - 1];
+        if (prevCursor) q = q.startAfter(prevCursor);
+      }
+
+      const snap = await q.get();
+      pageDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Update cursors
+      const firstDoc = snap.docs[0] || null;
+      _lastDoc       = snap.docs[snap.docs.length - 1] || null;
+      if (direction === 'first' || direction === 'next') {
+        _pageStack.push(firstDoc);
+      }
+    }
+
+    currentPageVoters = pageDocs.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    _applyClientSearch();
+
+  } catch (err) {
+    const isIndexErr = err.code === 'failed-precondition' || (err.message && err.message.includes('index'));
+    const hint = isIndexErr
+      ? ' — This filter needs a Firestore composite index. Check the browser console for a link to create it.'
+      : '';
+    document.getElementById('voter-list').innerHTML =
+      `<div class="loading-row" style="color:var(--danger)">Error loading page: ${escHtml(err.message)}${escHtml(hint)}</div>`;
+    showToast('Error: ' + err.message, 'error');
+    console.error(err);
+  }
+}
+
+// ── Apply secondary client-side filtering after Firestore returns results ──
+function _applyClientSearch() {
+  const { rawQ, q, barangay, precinct, team } = _currentFilters;
+  const notice = document.getElementById('search-scope-notice');
+  if (notice) notice.style.display = 'none';
+
+  let displayed = currentPageVoters;
+
+  // Extra client-side precinct/team filter when both dropdowns are set
+  const scopedBrgy = (currentUser.role !== 'admin' && currentUser.barangay)
+    ? currentUser.barangay : barangay;
+  if (precinct && team) {
+    displayed = displayed.filter(v => v.precinct === precinct && v.team === team);
+  } else if (scopedBrgy && team && !precinct) {
+    displayed = displayed.filter(v => v.team === team);
+  }
+
+  // Additional client-side filter to catch phone numbers not matched by prefix
+  // (e.g. user typed digits that appear mid-number)
+  if (rawQ) {
+    const looksLikePhone = /^[0-9+]/.test(rawQ.trim());
+    if (looksLikePhone) {
+      const qDigits = rawQ.replace(/\D/g, '');
+      displayed = displayed.filter(v =>
+        v.phone?.replace(/\D/g, '').includes(qDigits) ||
+        v.phone2?.replace(/\D/g, '').includes(qDigits)
+      );
+    } else {
+      // Name search: server already filtered by lastname/firstname prefix,
+      // but also keep any rows where the full name contains the query anywhere
+      // (catches middle name matches that the prefix query might miss)
+      displayed = displayed.filter(v =>
+        v.lastname?.toUpperCase().startsWith(rawQ.toUpperCase()) ||
+        v.firstname?.toUpperCase().startsWith(rawQ.toUpperCase()) ||
+        v.name?.toUpperCase().includes(rawQ.toUpperCase())
+      );
+    }
+  }
+
+  // ── No-phone filter: keep only voters with no phone AND no alt phone ──
+  const { phoneFilter } = _currentFilters;
+  if (phoneFilter === 'no-phone') {
+    displayed = displayed.filter(v => !v.phone?.trim() && !v.phone2?.trim());
+  }
+
+  document.getElementById('stat-results').textContent = displayed.length.toLocaleString();
+  _renderPageTable(displayed);
+}
+
+// ── Populate filter dropdowns from meta ──
+function _initFilters(barangays, precincts, teams) {
   const bSel = document.getElementById('barangay-filter');
   bSel.innerHTML = '<option value="">All barangays</option>';
   barangays.forEach(b => { const o = document.createElement('option'); o.value = b; o.textContent = b; bSel.appendChild(o); });
 
-  // Precinct filter
-  const pSel = document.getElementById('precinct-filter');
-  pSel.innerHTML = '<option value="">All precincts</option>';
-  precincts.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = 'Precinct ' + p; pSel.appendChild(o); });
+  // Populate all precincts initially (will be filtered when a barangay is selected)
+  _updatePrecinctDropdown('');
 
-  // Team filter
   const tSel = document.getElementById('team-filter');
   tSel.innerHTML = '<option value="">All teams</option>';
   teams.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; tSel.appendChild(o); });
+}
 
-  // Sidebar barangay list
-  const bList = document.getElementById('sb-barangay-list');
-  bList.innerHTML = '';
-  barangays.forEach(b => {
-    const count = allVoters.filter(v => v.barangay === b).length;
-    const div = document.createElement('div');
-    div.className = 'sidebar-item';
-    div.dataset.barangay = b;
-    div.innerHTML = `<svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>${escHtml(b)}<span class="sidebar-badge">${count}</span>`;
-    div.addEventListener('click', () => filterByBarangay(b));
-    bList.appendChild(div);
+// ── Repopulate precinct dropdown based on selected barangay ──
+// Costs zero Firestore reads — uses precinctsByBarangay from the meta doc loaded at login.
+function _updatePrecinctDropdown(barangay) {
+  const pSel = document.getElementById('precinct-filter');
+  if (!pSel) return;
+
+  let precincts;
+  if (barangay && window._precinctsByBarangay && window._precinctsByBarangay[barangay]) {
+    // Show only precincts that belong to the selected barangay
+    precincts = window._precinctsByBarangay[barangay];
+  } else {
+    // No barangay selected — show all precincts
+    precincts = window._allPrecincts || [];
+  }
+
+  const currentVal = pSel.value; // preserve selection if still valid
+  pSel.innerHTML = '<option value="">All precincts</option>';
+  precincts.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p;
+    o.textContent = 'Precinct ' + p;
+    pSel.appendChild(o);
   });
+  // Restore previous selection only if it still exists in the new list
+  if (precincts.includes(currentVal)) pSel.value = currentVal;
+}
 
-
-  // Sync drawer badges
-  const drawerTotal = document.getElementById('drawer-sb-total');
-  if (drawerTotal) drawerTotal.textContent = allVoters.length;
-  const drawerBList = document.getElementById('drawer-sb-barangay-list');
-  if (drawerBList) {
-    drawerBList.innerHTML = '';
+// ── Populate sidebar barangay list with counts from meta ──
+function _initSidebarBarangays(barangays, barangayCounts) {
+  const buildList = (containerId, onClickExtra) => {
+    const bList = document.getElementById(containerId);
+    if (!bList) return;
+    bList.innerHTML = '';
     barangays.forEach(b => {
-      const count = allVoters.filter(v => v.barangay === b).length;
+      const count = barangayCounts[b] != null ? barangayCounts[b].toLocaleString() : '—';
       const div = document.createElement('div');
       div.className = 'sidebar-item';
       div.dataset.barangay = b;
+      if (_currentFilters.barangay === b) div.classList.add('active');
       div.innerHTML = `<svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>${escHtml(b)}<span class="sidebar-badge">${count}</span>`;
-      div.addEventListener('click', () => { filterByBarangay(b); closeSidebar(); });
-      drawerBList.appendChild(div);
+      div.addEventListener('click', () => {
+        // Update active state on all sidebar barangay items
+        document.querySelectorAll('[data-barangay]').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll(`[data-barangay="${CSS.escape(b)}"]`).forEach(el => el.classList.add('active'));
+        filterByBarangay(b);
+        if (onClickExtra) onClickExtra();
+      });
+      bList.appendChild(div);
     });
-  }
+  };
+  buildList('sb-barangay-list', null);
+  buildList('drawer-sb-barangay-list', closeSidebar);
+}
 
-  filteredVoters = [...allVoters];
-  currentPage = 1;
-  renderTable();
+// ── Helper: update /meta/summary counters after writes ──
+async function _updateMeta(barangay, delta, precinct) {
+  try {
+    const inc = firebase.firestore.FieldValue.increment;
+    const update = { totalVoters: inc(delta) };
+    if (barangay) update[`barangayCounts.${barangay}`] = inc(delta);
+    // Keep precinctsByBarangay in sync when a new voter is added
+    // (arrayUnion is safe to call even if precinct already exists)
+    if (barangay && precinct && delta > 0) {
+      update[`precinctsByBarangay.${barangay}`] = firebase.firestore.FieldValue.arrayUnion(precinct);
+    }
+    // Use set+merge so this works even if the meta doc doesn't exist yet
+    await db.collection('meta').doc('summary').set(update, { merge: true });
+    // Reflect immediately in the sidebar total without a full reload
+    _totalVoters = Math.max(0, _totalVoters + delta);
+    document.getElementById('stat-total').textContent = _totalVoters.toLocaleString();
+    document.getElementById('sb-total').textContent   = _totalVoters.toLocaleString();
+    const dt = document.getElementById('drawer-sb-total');
+    if (dt) dt.textContent = _totalVoters.toLocaleString();
+  } catch(e) {
+    // Meta update failure is non-fatal — counters drift slightly but the voter doc is saved
+    console.warn('meta/summary update failed:', e.message);
+  }
+}
+
+// Legacy initUI shim — nothing calls this externally but keep it safe
+function initUI() { /* replaced by loadVoters() + _initFilters() + _initSidebarBarangays() */ }
+
+// ── Admin utility: rebuild /meta/summary from scratch by scanning all voters ──
+// Call this once after a data migration or structure change to re-sync counts/lists.
+// Costs 1 read per voter — only run manually via browser console: rebuildMetaSummary()
+async function rebuildMetaSummary() {
+  if (currentUser?.role !== 'admin') { showToast('Admin only.', 'warn'); return; }
+  showToast('Rebuilding meta/summary — this may take a moment…', 'info');
+  try {
+    const snap = await db.collection('voters').get();
+    const barangaySet = new Set(), precinctSet = new Set(), teamSet = new Set();
+    const barangayCounts = {};
+    const precinctsByBarangay = {};
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.barangay) {
+        barangaySet.add(data.barangay);
+        barangayCounts[data.barangay] = (barangayCounts[data.barangay] || 0) + 1;
+        // Build per-barangay precinct map
+        if (data.precinct) {
+          if (!precinctsByBarangay[data.barangay]) precinctsByBarangay[data.barangay] = new Set();
+          precinctsByBarangay[data.barangay].add(data.precinct);
+        }
+      }
+      if (data.precinct) precinctSet.add(data.precinct);
+      if (data.team)     teamSet.add(data.team);
+    });
+    // Convert Sets to sorted arrays
+    for (const b in precinctsByBarangay) {
+      precinctsByBarangay[b] = [...precinctsByBarangay[b]].sort();
+    }
+    const summary = {
+      totalVoters:         snap.size,
+      barangays:           [...barangaySet].sort(),
+      precincts:           [...precinctSet].sort(),
+      teams:               [...teamSet].sort(),
+      barangayCounts,
+      precinctsByBarangay,
+      rebuiltAt:           firebase.firestore.FieldValue.serverTimestamp()
+    };
+    await db.collection('meta').doc('summary').set(summary);
+    showToast(`meta/summary rebuilt: ${snap.size} voters, ${barangaySet.size} barangays.`, 'success');
+    // Reload so UI reflects updated meta
+    await loadVoters();
+  } catch (err) {
+    showToast('Rebuild failed: ' + err.message, 'error');
+    console.error(err);
+  }
 }
 
 function filterByBarangay(b) {
-  document.getElementById('barangay-filter').value = b;
-  document.getElementById('missing-filter').value  = '';
-  handleSearch();
-  showSection('voters');
-}
-
-function filterMissing(type) {
-  document.getElementById('missing-filter').value = type;
-  handleSearch();
+  const bf = document.getElementById('barangay-filter');
+  if (bf) bf.value = b;
+  _currentFilters.barangay    = b;
+  _currentFilters.precinct    = '';
+  _currentFilters.team        = '';
+  _currentFilters.phoneFilter = '';
+  // Repopulate precinct dropdown with only this barangay's precincts (zero reads)
+  _updatePrecinctDropdown(b);
+  const pf = document.getElementById('precinct-filter'); if (pf) pf.value = '';
+  const tf = document.getElementById('team-filter');     if (tf) tf.value = '';
+  const phf = document.getElementById('phone-filter');   if (phf) phf.value = '';
+  currentPage = 1;
+  _pageStack  = [];
+  _lastDoc    = null;
+  // Update topbar breadcrumb and view description
+  const topbarBc = document.getElementById('topbar-barangay');
+  if (topbarBc) topbarBc.textContent = b || 'All Barangays';
+  const viewDesc = document.getElementById('view-desc');
+  if (viewDesc) viewDesc.textContent = 'Parañaque City · ' + (b || 'All Barangays');
+  // FIX: use .catch() to surface errors since we can't await in a sync function
+  _loadPage('first').catch(err => showToast('Error loading barangay: ' + err.message, 'error'));
   showSection('voters');
 }
 
 let _searchDebounce = null;
 function handleSearch() {
   clearTimeout(_searchDebounce);
-  _searchDebounce = setTimeout(_doSearch, 120);
+  _searchDebounce = setTimeout(_doSearch, 350);
 }
 
 function _doSearch() {
-  const q  = document.getElementById('search-input').value.toLowerCase().trim();
-  const bg = document.getElementById('barangay-filter').value;
-  const pc = document.getElementById('precinct-filter').value;
-  const tm = document.getElementById('team-filter').value;
-  const mf = document.getElementById('missing-filter').value;
+  const raw = (document.getElementById('search-input').value || '').trim();
+  const q   = raw.toLowerCase();
+  const bg  = document.getElementById('barangay-filter').value;
+  const pc  = document.getElementById('precinct-filter').value;
+  const tm  = document.getElementById('team-filter').value;
+  const ph  = document.getElementById('phone-filter')?.value || '';
 
-  // Update precinct dropdown to only show precincts in the selected barangay
-  const pSel = document.getElementById('precinct-filter');
-  const relevantVoters = bg ? allVoters.filter(v => v.barangay === bg) : allVoters;
-  const availablePrecincts = [...new Set(relevantVoters.map(v => v.precinct).filter(Boolean))].sort();
-  // Only rebuild dropdown if options actually changed (prevents losing selection on every keystroke)
-  const currentOptions = [...pSel.options].slice(1).map(o => o.value).join(',');
-  if (currentOptions !== availablePrecincts.join(',')) {
-    pSel.innerHTML = '<option value="">All precincts</option>';
-    availablePrecincts.forEach(p => {
-      const o = document.createElement('option');
-      o.value = p; o.textContent = 'Precinct ' + p;
-      if (p === pc) o.selected = true;
-      pSel.appendChild(o);
-    });
+  // If barangay changed, repopulate precinct dropdown with that barangay's precincts only
+  if (bg !== _currentFilters.barangay) {
+    _updatePrecinctDropdown(bg);
+    // If the previously selected precinct no longer exists in new barangay, clear it
+    const pSel = document.getElementById('precinct-filter');
+    if (pSel && pc && !Array.from(pSel.options).some(o => o.value === pc)) {
+      pSel.value = '';
+    }
   }
-  const effectivePc = availablePrecincts.includes(pc) ? pc : '';
 
-  // Update team filter to only show teams in the selected barangay
-  const tSel = document.getElementById('team-filter');
-  const availableTeams = [...new Set(relevantVoters.map(v => v.team).filter(Boolean))].sort();
-  const currentTeamOptions = [...tSel.options].slice(1).map(o => o.value).join(',');
-  if (currentTeamOptions !== availableTeams.join(',')) {
-    tSel.innerHTML = '<option value="">All teams</option>';
-    availableTeams.forEach(t => {
-      const o = document.createElement('option');
-      o.value = t; o.textContent = t;
-      if (t === tm) o.selected = true;
-      tSel.appendChild(o);
-    });
+  const anyChanged = raw !== _currentFilters.rawQ ||
+                     bg  !== _currentFilters.barangay ||
+                     pc  !== _currentFilters.precinct ||
+                     tm  !== _currentFilters.team ||
+                     ph  !== _currentFilters.phoneFilter;
+
+  _currentFilters.rawQ        = raw;
+  _currentFilters.q           = q;
+  _currentFilters.barangay    = bg;
+  _currentFilters.precinct    = document.getElementById('precinct-filter').value; // re-read after possible reset
+  _currentFilters.team        = tm;
+  _currentFilters.phoneFilter = ph;
+
+  // Update topbar breadcrumb and view description to match barangay filter
+  const topbarBc = document.getElementById('topbar-barangay');
+  if (topbarBc) topbarBc.textContent = bg || 'All Barangays';
+  const viewDesc = document.getElementById('view-desc');
+  if (viewDesc) viewDesc.textContent = 'Parañaque City · ' + (bg || 'All Barangays');
+
+  if (anyChanged) {
+    currentPage = 1;
+    _pageStack  = [];
+    _lastDoc    = null;
+    _loadPage('first').catch(err => showToast('Error loading results: ' + err.message, 'error'));
   }
-  const effectiveTm = availableTeams.includes(tm) ? tm : '';
-
-  filteredVoters = allVoters.filter(v => {
-    const matchQ  = !q || v.name?.toLowerCase().includes(q) || v.address?.toLowerCase().includes(q) || v.phone?.includes(q) || v.phone2?.includes(q);
-    const matchBg = !bg || v.barangay === bg;
-    const matchPc = !effectivePc || v.precinct === effectivePc;
-    const matchTm = !effectiveTm || v.team === effectiveTm;
-    const matchMf = !mf
-      || (mf === 'phone' && !v.phone && !v.phone2);
-    return matchQ && matchBg && matchPc && matchTm && matchMf;
-  });
-
-  document.getElementById('stat-results').textContent = filteredVoters.length.toLocaleString();
-  currentPage = 1;
-  renderTable();
 }
 
 // ═══════════════════════════════════════════════════════════
-// TABLE RENDER
+// TABLE RENDER — works on the current in-memory page slice
 // ═══════════════════════════════════════════════════════════
 function renderTable() {
+  // Legacy call shim: re-apply client search on whatever's in currentPageVoters
+  _applyClientSearch();
+}
+
+function _renderPageTable(voters) {
   const list  = document.getElementById('voter-list');
-  const total = filteredVoters.length;
-  const totalP = Math.ceil(total / PAGE_SIZE);
-  const start = (currentPage - 1) * PAGE_SIZE;
-  const end   = Math.min(start + PAGE_SIZE, total);
-  const page  = filteredVoters.slice(start, end);
+  const pagEl = document.getElementById('pagination');
 
-  document.getElementById('stat-results').textContent = total.toLocaleString();
-
-  if (page.length === 0) {
+  if (voters.length === 0) {
     list.innerHTML = '<div class="empty-row">No voters found matching your search.</div>';
     document.getElementById('voter-card-list').innerHTML = '<div class="loading-row">No matching voters found.</div>';
-    document.getElementById('pagination').style.display = 'none';
+    if (pagEl) pagEl.style.display = 'none';
     return;
   }
 
-  list.innerHTML = page.map((v, i) => {
-    const missingPhone = !v.phone && !v.phone2;
-    const missingClass = missingPhone ? ' missing-info' : '';
-    const phoneBadge   = missingPhone ? '<span class="missing-badge">NO PHONE</span>' : '';
-    return `
-    <div class="voter-row${missingClass}" onclick="openVoterModal('${escHtml(v.id)}')">
-      <div class="voter-num">${start + i + 1}</div>
+  // Render desktop rows — row number is always relative to current page start
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  list.innerHTML = voters.map((v, i) => `
+    <div class="voter-row" data-voter-id="${escHtml(v.id)}">
+      <div class="voter-num">${pageStart + i + 1}</div>
       <div class="voter-name">${escHtml(v.name || '')}</div>
       <div class="voter-addr">${escHtml(v.address || '—')}</div>
-      <div class="voter-phone">${missingPhone ? `<span style="color:var(--warn);font-size:11px">—${phoneBadge}</span>` : escHtml(v.phone)}</div>
+      <div class="voter-phone">${escHtml(v.phone || '—')}</div>
       <div class="voter-barangay">${escHtml(v.barangay || '—')}</div>
       <div class="voter-precinct">${escHtml(v.precinct || '—')}</div>
       <div class="voter-action"><button class="btn-view">View</button></div>
-    </div>`;
-  }).join('');
+    </div>`).join('');
 
   // Render mobile cards
-  renderMobileCards(page, start);
+  renderMobileCards(voters, pageStart);
 
-  // Pagination
-  const pagEl  = document.getElementById('pagination');
+  // Pagination — server-side prev/next only (we don't know exact total pages)
+  if (!pagEl) return;
+  const hasPrev = currentPage > 1;
+  const hasNext = currentPageVoters.length === PAGE_SIZE && voters.length > 0; // FIX: also disable when filtered results are empty
+  pagEl.style.display = 'flex';
   const infoEl = document.getElementById('page-info');
   const btnsEl = document.getElementById('page-btns');
-
-  if (totalP <= 1) { pagEl.style.display = 'none'; return; }
-  pagEl.style.display = 'flex';
-  infoEl.textContent = `Showing ${start + 1}–${end} of ${total.toLocaleString()}`;
-
-  let btns = '';
-  const range = pageRange(currentPage, totalP, 7);
-  if (range[0] > 1) btns += `<button class="btn-page" onclick="goPage(1)">1</button>`;
-  if (range[0] > 2) btns += `<span style="padding:0 4px;color:var(--hint)">…</span>`;
-  range.forEach(p => { btns += `<button class="btn-page ${p === currentPage ? 'active' : ''}" onclick="goPage(${p})">${p}</button>`; });
-  if (range[range.length-1] < totalP - 1) btns += `<span style="padding:0 4px;color:var(--hint)">…</span>`;
-  if (range[range.length-1] < totalP) btns += `<button class="btn-page" onclick="goPage(${totalP})">${totalP}</button>`;
-  btnsEl.innerHTML = `
-    <button class="btn-page" onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>← Prev</button>
-    ${btns}
-    <button class="btn-page" onclick="goPage(${currentPage + 1})" ${currentPage === totalP ? 'disabled' : ''}>Next →</button>`;
+  const start  = (currentPage - 1) * PAGE_SIZE + 1;
+  const end    = (currentPage - 1) * PAGE_SIZE + voters.length;
+  if (infoEl) infoEl.textContent = `Showing ${start}–${end}${_totalVoters ? ' of ' + _totalVoters.toLocaleString() : ''}`;
+  if (btnsEl) btnsEl.innerHTML = `
+    <button class="btn-page" onclick="goPage('prev')" ${hasPrev ? '' : 'disabled'}>← Prev</button>
+    <button class="btn-page active" style="pointer-events:none">Page ${currentPage}</button>
+    <button class="btn-page" onclick="goPage('next')" ${hasNext ? '' : 'disabled'}>Next →</button>`;
 }
 
-function goPage(p) {
-  const totalP = Math.ceil(filteredVoters.length / PAGE_SIZE);
-  if (p < 1 || p > totalP) return;
-  currentPage = p;
-  renderTable();
+async function goPage(direction) {
+  if (direction === 'prev' && currentPage <= 1) return;
+  if (direction === 'next' && currentPageVoters.length < PAGE_SIZE) return;
+  if (direction === 'next') currentPage++;
+  if (direction === 'prev') currentPage--;
+  await _loadPage(direction);
   document.querySelector('.content').scrollTop = 0;
 }
 
@@ -1502,7 +1816,8 @@ function renderModalInlineBody() {
   const badge   = document.getElementById('edit-mode-badge');
   const editBtn = document.getElementById('btn-toggle-edit');
   const actions = document.getElementById('modal-actions');
-  const isAdmin = currentUser?.role === 'admin';
+  const isAdmin    = currentUser?.role === 'admin';
+  const canEditAid = hasPerm('govAid');
 
   if (badge)   badge.style.display   = inlineEditMode ? 'inline-flex' : 'none';
   if (editBtn) editBtn.textContent   = inlineEditMode ? 'Cancel' : 'Edit';
@@ -1526,34 +1841,25 @@ function renderModalInlineBody() {
       ${modalVoter.team  ? field('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>', 'Team / Leader', modalVoter.team) : ''}
       ${modalVoter.notes ? field('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>', 'Notes', modalVoter.notes) : ''}
     `;
-    if (actions) actions.innerHTML = `
-      <button class="btn btn-secondary" onclick="closeVoterModal()">Close</button>
-      ${isAdmin ? `<button class="btn btn-danger" onclick="deleteVoter('${modalVoter.id}')">Delete</button>` : ''}`;
+    if (actions) {
+      actions.innerHTML = `
+        <button class="btn btn-secondary" onclick="closeVoterModal()">Close</button>
+        ${hasPerm('deleteVoters') ? `<button class="btn btn-danger" data-action="delete-voter">Delete</button>` : ''}`;
+      const delBtn = actions.querySelector('[data-action="delete-voter"]');
+      if (delBtn) delBtn.addEventListener('click', () => deleteVoter(modalVoter.id));
+    }
   } else {
     // ── EDIT mode — render editable fields directly in body
     const civil = ['','Single','Married','Widowed','Separated','Annulled'];
     const sel = (id, val) => civil.map(o => `<option value="${o}"${val===o?' selected':''}>${o||'Select…'}</option>`).join('');
-    // If lastname/firstname not stored separately, try to parse from combined name "LAST, FIRST MIDDLE SUFFIX"
-    let editLastname  = modalVoter.lastname  || '';
-    let editFirstname = modalVoter.firstname || '';
-    let editMiddle    = modalVoter.middlename || '';
-    let editSuffix    = modalVoter.suffix || '';
-    if (!editLastname && !editFirstname && modalVoter.name) {
-      const parts = modalVoter.name.split(',');
-      editLastname  = (parts[0] || '').trim();
-      const rest    = (parts[1] || '').trim().split(' ').filter(Boolean);
-      editFirstname = rest[0] || '';
-      editMiddle    = rest.length > 2 ? rest.slice(1, -1).join(' ') : (rest[1] || '');
-      editSuffix    = rest.length > 2 ? rest[rest.length - 1] : '';
-    }
     body.innerHTML = `
       <div style="padding:1rem 1.25rem;display:flex;flex-direction:column;gap:0.75rem;">
         <div class="register-section-title" style="margin-bottom:0.25rem">Personal Information</div>
         <div class="form-grid">
-          <div class="field"><label>Last Name *</label><input id="e-lastname" value="${escHtml(editLastname)}" autocapitalize="characters"/></div>
-          <div class="field"><label>First Name *</label><input id="e-firstname" value="${escHtml(editFirstname)}" autocapitalize="characters"/></div>
-          <div class="field"><label>Middle Name</label><input id="e-middlename" value="${escHtml(editMiddle)}"/></div>
-          <div class="field"><label>Suffix</label><input id="e-suffix" value="${escHtml(editSuffix)}"/></div>
+          <div class="field"><label>Last Name *</label><input id="e-lastname" value="${escHtml(modalVoter.lastname||'')}" autocapitalize="characters"/></div>
+          <div class="field"><label>First Name *</label><input id="e-firstname" value="${escHtml(modalVoter.firstname||'')}" autocapitalize="characters"/></div>
+          <div class="field"><label>Middle Name</label><input id="e-middlename" value="${escHtml(modalVoter.middlename||'')}"/></div>
+          <div class="field"><label>Suffix</label><input id="e-suffix" value="${escHtml(modalVoter.suffix||'')}"/></div>
           <div class="field"><label>Birthday</label><input id="e-birthday" type="date" value="${escHtml(modalVoter.birthday||'')}"/></div>
           <div class="field"><label>Civil Status</label><select id="e-civil">${sel('e-civil', modalVoter.civilStatus)}</select></div>
         </div>
@@ -1586,10 +1892,18 @@ function renderModalActions(tab) {
   switchModalTab(tab);
 }
 
-function openVoterModal(id) {
-  const v = filteredVoters.find(x => x.id === String(id));
-  if (!v) return;
-  const idx = filteredVoters.indexOf(v);
+function openVoterModal(idxOrId) {
+  let v, idx;
+  // Both desktop table rows and mobile cards pass the Firestore string ID
+  // via data-voter-id. The old numeric-index branch is dead code — all
+  // click handlers now use delegated listeners that read dataset.voterId
+  // (always a string). Look up by ID in both cases.
+  v = filteredVoters.find(x => x.id === String(idxOrId));
+  idx = filteredVoters.indexOf(v);
+  if (!v) {
+    showToast('Voter record not found. Please refresh the list and try again.', 'warn');
+    return;
+  }
   modalVoter    = v;
   modalVoterIdx = idx;
   aidEntries    = Array.isArray(v.govAid) ? JSON.parse(JSON.stringify(v.govAid)) : [];
@@ -1617,13 +1931,19 @@ function openVoterModal(id) {
   // ── Aid tab
   renderAidList();
 
+  // Show/hide Add Aid form based on permission
+  const aidAddSection = document.getElementById('aid-add-section');
+  if (aidAddSection) {
+    aidAddSection.style.display = hasPerm('govAid') ? '' : 'none';
+  }
+
   // Reset to view mode and render
   inlineEditMode = false;
   renderModalInlineBody();
 
-  // Show edit button only for admins
+  // Show edit button only if user has edit permission
   const editBtn = document.getElementById('btn-toggle-edit');
-  if (editBtn) editBtn.style.display = currentUser?.role === 'admin' ? '' : 'none';
+  if (editBtn) editBtn.style.display = hasPerm('editVoters') ? '' : 'none';
 
   document.getElementById('voter-modal').classList.add('open');
 
@@ -1633,8 +1953,9 @@ function openVoterModal(id) {
 
 function renderAidList() {
   const list = document.getElementById('aid-list');
+  const canEdit = hasPerm('govAid');
   if (aidEntries.length === 0) {
-    list.innerHTML = `<div class="aid-empty">No government aid recorded yet.<br>Use the form below to add entries.</div>`;
+    list.innerHTML = `<div class="aid-empty">No government aid recorded yet.${canEdit ? '<br>Use the form below to add entries.' : ''}</div>`;
     return;
   }
   list.innerHTML = aidEntries.map((a, i) => `
@@ -1644,9 +1965,9 @@ function renderAidList() {
         ${a.amount ? `<div class="aid-item-date">₱${escHtml(a.amount)}${a.date ? ' · ' + escHtml(a.date) : ''}</div>` : (a.date ? `<div class="aid-item-date">${escHtml(a.date)}</div>` : '')}
       </div>
       <span style="flex:1"></span>
-      <button class="aid-item-remove" onclick="removeAidEntry(${i})" title="Remove">
+      ${canEdit ? `<button class="aid-item-remove" onclick="removeAidEntry(${i})" title="Remove">
         <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+      </button>` : ''}
     </div>`).join('');
 }
 
@@ -1685,16 +2006,12 @@ async function saveAidToFirestore() {
     await db.collection('voters').doc(modalVoter.id).update({ govAid: aidEntries });
     // Update local cache
     modalVoter.govAid = JSON.parse(JSON.stringify(aidEntries));
-    const v = allVoters.find(x => x.id === modalVoter.id);
+    const v = currentPageVoters.find(x => x.id === modalVoter.id);
     if (v) v.govAid = modalVoter.govAid;
   } catch(err) { showToast('Could not save aid: ' + err.message, 'error'); }
 }
 
 async function saveVoterEdit() {
-  if (modalVoter?.id?.startsWith('_pending_')) {
-    showToast('This record is still syncing from a bulk import. Please refresh the page first.', 'warn');
-    return;
-  }
   const get = id => document.getElementById(id)?.value?.trim() || '';
   const lastname  = get('e-lastname');
   const firstname = get('e-firstname');
@@ -1707,7 +2024,10 @@ async function saveVoterEdit() {
   }
 
   const btn = document.getElementById('btn-save-edit');
-  btn.disabled = true; btn.textContent = 'Saving…';
+  // FIX: guard against null — the edit actions panel may be re-rendered by
+  // a concurrent toggleInlineEdit() call (e.g. rapid double-tap), which would
+  // remove btn from the DOM before the finally block runs.
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
 
   const middlename = get('e-middlename');
   const suffix     = get('e-suffix');
@@ -1730,28 +2050,23 @@ async function saveVoterEdit() {
 
   try {
     await db.collection('voters').doc(modalVoter.id).update(updates);
-    // Update all three caches so the table re-renders correctly
+    // Update local cache
     Object.assign(modalVoter, updates);
-    const av = allVoters.find(x => x.id === modalVoter.id);
-    if (av) Object.assign(av, updates);
-    const fv = filteredVoters.find(x => x.id === modalVoter.id);
-    if (fv) Object.assign(fv, updates);
-    // Refresh stat cards (missing phone count may have changed)
-    const noPhone = allVoters.filter(v => !v.phone && !v.phone2).length;
-    document.getElementById('stat-no-phone').textContent = noPhone.toLocaleString();
+    const v = currentPageVoters.find(x => x.id === modalVoter.id);
+    if (v) Object.assign(v, updates);
     // Switch back to view mode — renderModalInlineBody reads from modalVoter which we just updated
     document.getElementById('modal-name').textContent = name;
-    document.getElementById('modal-id').textContent   = updates.voterId ? `Voter ID: ${updates.voterId}` : `Precinct: ${updates.precinct || '—'}`;
     inlineEditMode = false;
     renderModalInlineBody();
-    // Re-render the table row in place so phone/ID badges update immediately
-    renderTable();
     showToast('Voter details saved!', 'success');
   } catch(err) {
     showToast('Save failed: ' + err.message, 'error');
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Changes`;
+    const saveBtn = document.getElementById('btn-save-edit');
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = `<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Changes`;
+    }
   }
 }
 
@@ -1762,23 +2077,20 @@ function closeVoterModal() {
 }
 
 async function deleteVoter(id) {
-  if (String(id).startsWith('_pending_')) {
-    showToast('This record is still syncing from a bulk import. Please refresh the page first.', 'warn');
-    return;
-  }
   if (!confirm('Delete this voter record permanently?')) return;
   try {
+    const barangay = modalVoter?.barangay || null;
     await db.collection('voters').doc(id).delete();
+    await _updateMeta(barangay, -1);
+    // _updateMeta already decrements _totalVoters and updates stat cards,
+    // so no extra manual decrement needed here.
     showToast('Voter record deleted.', 'success');
     closeVoterModal();
-    // Remove from local caches instead of a full reload
-    allVoters      = allVoters.filter(v => v.id !== id);
-    filteredVoters = filteredVoters.filter(v => v.id !== id);
-    // Update stat cards
-    document.getElementById('stat-total').textContent     = allVoters.length.toLocaleString();
-    document.getElementById('stat-no-phone').textContent  = allVoters.filter(v => !v.phone && !v.phone2).length.toLocaleString();
-    document.getElementById('sb-total').textContent       = allVoters.length;
-    renderTable();
+    // Reset to first page after delete
+    currentPage = 1;
+    _pageStack  = [];
+    _lastDoc    = null;
+    await _loadPage('first');
   } catch (err) { showToast('Delete failed: ' + err.message, 'error'); }
 }
 
@@ -1790,6 +2102,11 @@ function clearSingleForm() {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  // Re-apply the user's assigned barangay after clearing so they never have
+  // to type it again. Admins have no assigned barangay so this is a no-op for them.
+  const assignedBrgy = currentUser?.barangay || '';
+  const fBrgy = document.getElementById('f-barangay');
+  if (fBrgy && assignedBrgy) fBrgy.value = assignedBrgy;
 }
 
 async function saveSingleVoter() {
@@ -1829,15 +2146,13 @@ async function saveSingleVoter() {
   btn.disabled = true; btn.textContent = 'Saving…';
 
   try {
-    const docRef = await db.collection('voters').add(voter);
-    // Update local cache — no full reload needed
-    const newVoter = { id: docRef.id, ...voter };
-    allVoters.push(newVoter);
-    allVoters.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    _saveCache(allVoters);
-    initUI();
+    await db.collection('voters').add(voter);
+    await _updateMeta(barangay, +1, precinct);
     showToast(`Voter "${name}" saved successfully!`, 'success');
     clearSingleForm();
+    // Reload first page so the new record is visible
+    currentPage = 1; _pageStack = []; _lastDoc = null;
+    await _loadPage('first');
   } catch (err) {
     showToast('Save failed: ' + err.message, 'error');
   } finally {
@@ -1849,6 +2164,22 @@ async function saveSingleVoter() {
 // ═══════════════════════════════════════════════════════════
 // BULK IMPORT
 // ═══════════════════════════════════════════════════════════
+
+// Show or hide the auto-fill notice above the bulk textarea.
+// Called whenever the register section is opened or the tab is switched.
+function _updateBulkBarangayNotice() {
+  const notice = document.getElementById('bulk-barangay-notice');
+  if (!notice) return;
+  const assignedBrgy = currentUser?.barangay || '';
+  if (assignedBrgy) {
+    notice.style.display = 'flex';
+    const span = notice.querySelector('span');
+    if (span) span.innerHTML = `Barangay column will be auto-filled as <strong>${escHtml(assignedBrgy)}</strong> for any row that leaves it blank.`;
+  } else {
+    notice.style.display = 'none';
+  }
+}
+
 function parseBulkPreview() {
   const raw = document.getElementById('bulk-input').value.trim();
   if (!raw) { document.getElementById('bulk-preview-area').innerHTML = ''; document.getElementById('btn-bulk-import').disabled = true; return; }
@@ -1876,14 +2207,17 @@ function parseBulkPreview() {
     const nameParts = [lastname, firstname + (middlename ? ' ' + middlename : '') + (suffix ? ' ' + suffix : '')].filter(Boolean);
     const name = nameParts.join(', ');
 
+    // Auto-fill barangay from the user's assigned barangay if the column is blank.
+    // This lets officials paste data without a barangay column at all.
+    const _autoBarangay = (!barangay && currentUser?.barangay) ? currentUser.barangay : barangay;
     const errors = [];
-    if (!lastname)  errors.push('missing lastname');
-    if (!firstname) errors.push('missing firstname');
-    if (!address)   errors.push('missing address');
-    if (!barangay)  errors.push('missing barangay');
-    if (!precinct)  errors.push('missing precinct');
+    if (!lastname)      errors.push('missing lastname');
+    if (!firstname)     errors.push('missing firstname');
+    if (!address)       errors.push('missing address');
+    if (!_autoBarangay) errors.push('missing barangay');
+    if (!precinct)      errors.push('missing precinct');
 
-    return { row: i + 1, name, lastname, firstname, middlename, suffix, birthday, civilStatus, phone, phone2, address, barangay, precinct, voterId, team, notes, errors, valid: errors.length === 0 };
+    return { row: i + 1, name, lastname, firstname, middlename, suffix, birthday, civilStatus, phone, phone2, address, barangay: _autoBarangay, precinct, voterId, team, notes, errors, valid: errors.length === 0 };
   });
 
   const validCount = bulkRows.filter(r => r.valid).length;
@@ -1922,13 +2256,57 @@ async function bulkImport() {
 
   const btn = document.getElementById('btn-bulk-import');
   btn.disabled = true;
-  btn.textContent = `Importing 0 / ${valid.length}…`;
 
-  let done = 0, failed = 0;
   const BATCH_SIZE = 400; // Firestore batch limit is 500
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-  for (let i = 0; i < valid.length; i += BATCH_SIZE) {
-    const chunk = valid.slice(i, i + BATCH_SIZE);
+  // ── Step 1: deduplicate within the pasted data itself ──
+  // Catches the case where someone pastes the same CSV twice or has
+  // repeated rows in their spreadsheet before even hitting Firestore.
+  const seenLocal = new Set();
+  const dedupedValid = [];
+  for (const r of valid) {
+    const k = voterDedupKey(r);
+    if (!seenLocal.has(k)) { seenLocal.add(k); dedupedValid.push(r); }
+  }
+  const selfDupes = valid.length - dedupedValid.length;
+
+  // ── Step 2: check against existing Firestore records ──
+  btn.textContent = 'Checking for duplicates…';
+  let existingKeys = new Set();
+  try {
+    const snap = await db.collection('voters').select('lastname', 'firstname', 'middlename', 'precinct').get();
+    snap.forEach(doc => existingKeys.add(voterDedupKey(doc.data())));
+  } catch(e) {
+    // Non-fatal — warn and continue without server-side dedup
+    showToast('Could not check existing records — will import all.', 'warn');
+    await sleep(1000);
+  }
+
+  const toImport = dedupedValid.filter(r => !existingKeys.has(voterDedupKey(r)));
+  const dbDupes  = dedupedValid.length - toImport.length;
+  const totalSkipped = selfDupes + dbDupes;
+
+  if (totalSkipped > 0) {
+    const parts = [];
+    if (selfDupes > 0) parts.push(`${selfDupes} duplicate${selfDupes > 1 ? 's' : ''} within your data`);
+    if (dbDupes  > 0) parts.push(`${dbDupes} already in database`);
+    showToast(`Skipping ${totalSkipped} duplicate${totalSkipped > 1 ? 's' : ''}: ${parts.join(', ')}.`, 'warn');
+  }
+
+  if (toImport.length === 0) {
+    showToast('Nothing to import — all rows are duplicates.', 'warn');
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg> Import All Valid Rows`;
+    return;
+  }
+
+  // ── Step 3: write in batches ──
+  let done = 0, failed = 0;
+  btn.textContent = `Importing 0 / ${toImport.length}…`;
+
+  for (let i = 0; i < toImport.length; i += BATCH_SIZE) {
+    const chunk = toImport.slice(i, i + BATCH_SIZE);
     const batch = db.batch();
     chunk.forEach(r => {
       const ref = db.collection('voters').doc();
@@ -1946,30 +2324,35 @@ async function bulkImport() {
       done += chunk.length;
     } catch (err) {
       failed += chunk.length;
+      console.error('Batch failed:', err);
     }
-    btn.textContent = `Importing ${done} / ${valid.length}…`;
+    btn.textContent = `Importing ${done} / ${toImport.length}…`;
+  }
+
+  // ── Step 4: update meta for every record that actually got written ──
+  if (done > 0) {
+    const successRows = toImport.slice(0, done);
+    const barangayDeltas = {};
+    for (const r of successRows) {
+      if (r.barangay) barangayDeltas[r.barangay] = (barangayDeltas[r.barangay] || 0) + 1;
+    }
+    const incFV = firebase.firestore.FieldValue.increment;
+    const metaUpd = { totalVoters: incFV(done) };
+    for (const [b, count] of Object.entries(barangayDeltas)) {
+      metaUpd[`barangayCounts.${b}`] = incFV(count);
+    }
+    try { await db.collection('meta').doc('summary').set(metaUpd, { merge: true }); } catch(e) { console.warn('meta update failed', e); }
+    _totalVoters += done;
   }
 
   if (failed === 0) {
-    showToast(`Successfully imported ${done} voter records!`, 'success');
+    const skipNote = totalSkipped > 0 ? `, ${totalSkipped} duplicate${totalSkipped > 1 ? 's' : ''} skipped` : '';
+    showToast(`Successfully imported ${done} voter record${done > 1 ? 's' : ''}${skipNote}!`, 'success');
     document.getElementById('bulk-input').value = '';
     document.getElementById('bulk-preview-area').innerHTML = '';
-    // Append imported rows to local cache — no full reload needed
-    valid.forEach(r => {
-      allVoters.push({
-        id: '_pending_' + Math.random().toString(36).slice(2), // temp ID until next real load
-        name: r.name, lastname: r.lastname, firstname: r.firstname,
-        middlename: r.middlename, suffix: r.suffix, birthday: r.birthday,
-        civilStatus: r.civilStatus, phone: r.phone, phone2: r.phone2,
-        address: r.address, barangay: r.barangay, precinct: r.precinct,
-        voterId: r.voterId, team: r.team, notes: r.notes,
-        addedBy: currentUser.uid
-      });
-    });
-    allVoters.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    _saveCache(allVoters);
     bulkRows = [];
-    initUI();
+    currentPage = 1; _pageStack = []; _lastDoc = null;
+    await _loadPage('first');
   } else {
     showToast(`Imported ${done}, failed ${failed}. Check console for details.`, 'warn');
   }
@@ -1989,10 +2372,17 @@ async function loadTeamMembers() {
     const snap = await db.collection('users').get();
     const members = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     document.getElementById('sb-team').textContent = members.length;
+    const drawerTeam = document.getElementById('drawer-sb-team');
+    if (drawerTeam) drawerTeam.textContent = members.length;
 
     if (members.length === 0) { grid.innerHTML = '<div class="loading-row">No team members yet. Add your first team member.</div>'; return; }
 
-    grid.innerHTML = members.map(m => `
+    const permMap = { viewVoters:'View Voters', editVoters:'Edit Voters', addVoters:'Add Voters', deleteVoters:'Delete Voters', bulkImport:'Bulk Import', govAid:'Gov. Aid', exportData:'Export', viewTeam:'View Team' };
+    grid.innerHTML = members.map(m => {
+      const isMe = m.id === currentUser.uid;
+      const permLabels = m.role === 'admin' ? ['All permissions'] :
+        Object.entries(m.permissions || {}).filter(([,v]) => v).map(([k]) => permMap[k] || k);
+      return `
       <div class="team-card">
         <div class="team-card-header">
           <div class="team-avatar ${m.role === 'admin' ? 'admin' : 'official'}">${escHtml(m.initials || '?')}</div>
@@ -2002,13 +2392,52 @@ async function loadTeamMembers() {
           <div class="team-meta-row"><svg viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/></svg>${escHtml(m.barangay || 'All barangays')}</div>
           <div class="team-meta-row"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Role: <strong>${m.role === 'admin' ? 'Super Admin' : 'Official'}</strong></div>
           ${m.phone ? `<div class="team-meta-row"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.1 19.79 19.79 0 0 1 1.61 4.5 2 2 0 0 1 3.6 2.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.5 17z"/></svg>${escHtml(m.phone)}</div>` : ''}
+          <div class="team-meta-row" style="flex-wrap:wrap;gap:4px;align-items:flex-start">
+            <svg viewBox="0 0 24 24" style="flex-shrink:0;margin-top:2px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            ${permLabels.length > 0
+              ? permLabels.map(p => `<span style="font-size:10px;background:var(--accent-bg);color:var(--accent);border-radius:4px;padding:1px 6px;font-weight:500">${p}</span>`).join('')
+              : `<span style="font-size:11px;color:var(--hint)">No permissions granted</span>`}
+          </div>
         </div>
-        ${m.id !== currentUser.uid ? `<div class="team-card-actions"><button class="btn btn-danger" style="font-size:12px;padding:5px 10px" onclick="deleteTeamMember('${m.id}', '${escHtml(m.name || m.email)}')">Remove</button></div>` : '<div class="team-card-actions"><span style="font-size:11px;color:var(--hint)">That\'s you</span></div>'}
-      </div>`).join('');
+        ${isMe
+          ? `<div class="team-card-actions"><span style="font-size:11px;color:var(--hint)">That's you</span></div>`
+          : `<div class="team-card-actions"><button class="btn btn-danger" style="font-size:12px;padding:5px 10px" data-action="delete-member" data-uid="${escHtml(m.id)}" data-name="${escHtml(m.name || m.email)}">Remove</button></div>`}
+      </div>`;
+    }).join('');
   } catch (err) {
     grid.innerHTML = `<div class="loading-row" style="color:var(--danger)">Error: ${escHtml(err.message)}</div>`;
   }
 }
+
+window.addEventListener('load', () => {
+  const grid = document.getElementById('team-grid');
+  if (grid) {
+    grid.addEventListener('click', e => {
+      const btn = e.target.closest('[data-action="delete-member"]');
+      if (btn) deleteTeamMember(btn.dataset.uid, btn.dataset.name);
+    });
+  }
+});
+
+// Delegated handlers for voter list (rows + mobile cards)
+window.addEventListener('load', () => {
+  // Desktop voter rows
+  const voterList = document.getElementById('voter-list');
+  if (voterList) {
+    voterList.addEventListener('click', e => {
+      const row = e.target.closest('[data-voter-id]');
+      if (row) openVoterModal(row.dataset.voterId);
+    });
+  }
+  // Mobile voter cards
+  const cardList = document.getElementById('voter-card-list');
+  if (cardList) {
+    cardList.addEventListener('click', e => {
+      const card = e.target.closest('[data-voter-id]');
+      if (card) openVoterModal(card.dataset.voterId);
+    });
+  }
+});
 
 function selectRole(role) {
   document.getElementById('tm-role').value = role;
@@ -2021,6 +2450,13 @@ function selectRole(role) {
 
 function openAddTeamModal() {
   ['tm-name','tm-initials','tm-email','tm-password','tm-barangay','tm-phone'].forEach(id => { document.getElementById(id).value = ''; });
+  // FIX: also clear permission checkboxes so previous selections don't bleed
+  // into new team member entries when the modal is reused.
+  ['perm-view-voters','perm-edit-voters','perm-add-voters','perm-delete-voters',
+   'perm-bulk-import','perm-gov-aid','perm-export','perm-view-team'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = false;
+  });
   selectRole('official'); // resets hidden input + role card highlights
   document.getElementById('team-modal').classList.add('open');
 }
@@ -2052,16 +2488,26 @@ async function saveTeamMember() {
     const uid  = cred.user.uid;
 
     // Save user profile to Firestore
+    const perms = role === 'admin' ? {} : {
+      viewVoters:   document.getElementById('perm-view-voters').checked,
+      editVoters:   document.getElementById('perm-edit-voters').checked,
+      addVoters:    document.getElementById('perm-add-voters').checked,
+      deleteVoters: document.getElementById('perm-delete-voters').checked,
+      bulkImport:   document.getElementById('perm-bulk-import').checked,
+      govAid:       document.getElementById('perm-gov-aid').checked,
+      exportData:   document.getElementById('perm-export').checked,
+      viewTeam:     document.getElementById('perm-view-team').checked,
+    };
     await db.collection('users').doc(uid).set({
       name, initials: initials || name.substring(0,2).toUpperCase(),
       email, role, barangay: barangay || null, phone,
+      permissions: perms,
       createdBy: currentUser.uid,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    // Re-authenticate the admin so their session stays active
-    const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, adminPass);
-    await auth.currentUser.reauthenticateWithCredential(credential);
+    // Re-sign in as the original admin (createUserWithEmailAndPassword switched currentUser to the new account)
+    await auth.signInWithEmailAndPassword(currentUser.email, adminPass);
 
     showToast(`Team member "${name}" created!`, 'success');
     closeTeamModal();
@@ -2145,23 +2591,18 @@ function escHtml(str) {
 async function initPdfWorker() {
   try {
     const resp = await fetch('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js');
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const text = await resp.text();
     const blob = new Blob([text], { type: 'application/javascript' });
     pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
   } catch(e) {
     console.error('Could not load PDF.js worker from CDN:', e);
-    // Show a visible error in the PDF dropzone so the user knows PDF import won't work
-    const dropzone = document.getElementById('pdf-dropzone');
-    if (dropzone) {
-      dropzone.innerHTML = `<div style="padding:1.5rem;text-align:center;color:var(--danger);font-size:13px;">
-        <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;margin-bottom:8px;display:block;margin-left:auto;margin-right:auto"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        PDF import is unavailable — could not load the PDF engine from the CDN.<br>
-        <span style="color:var(--muted);font-size:12px;margin-top:4px;display:block">Check your internet connection and reload the page to try again.</span>
-      </div>`;
-      dropzone.style.pointerEvents = 'none';
+    // Fallback: use a minimal inline worker blob so PDF.js doesn't break silently
+    try {
+      const fallback = new Blob(['self.onmessage=function(){}'], { type: 'application/javascript' });
+      pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(fallback);
+    } catch(e2) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'about:blank';
     }
-    showToast('PDF engine failed to load. PDF import is disabled.', 'error');
   }
 }
 
@@ -2254,16 +2695,64 @@ async function parseAllPdfs() {
         const precMatch = textSpaced.match(/Prec\s*:\s*([A-Z0-9]+)/);
         if (precMatch) currentPrecinct = precMatch[1];
 
-        // Extract barangay — normalize spacing/dots (e.g. "B. F. HOMES" → "B F Homes")
-        // PDF.js joins items with single spaces so we match up to "LIST OF VOTERS"
-        const barMatch = textSpaced.match(/BARANGAY\s*:\s*([A-Z][A-Z0-9 .,'()-]+?)\s+LIST\s+OF\s+VOTERS/i);
-        if (barMatch) {
-          currentBarangay = barMatch[1].trim()
-            .replace(/\./g, '')         // remove dots only: "B. F. HOMES" → "B  F  HOMES"
-            .replace(/\s+/g, ' ')       // collapse spaces: → "B F HOMES"
-            .trim();
-          // Title-case: "B F HOMES" → "B F Homes", "DON BOSCO" → "Don Bosco"
-          currentBarangay = currentBarangay.replace(/\b\w+/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+        // Extract barangay from the page header.
+        // Root cause fix: "BARANGAY : B. F. HOMES" and "LIST OF VOTERS" are on
+        // DIFFERENT y-positions (16pts apart) so they end up in separate lines in
+        // PDF.js and never appear together in textSpaced. The old regex required
+        // LIST OF VOTERS as a terminator on the same line — that never matched.
+        // Fix: scan each grouped line individually for "BARANGAY : <name>" with
+        // no dependency on what follows on the next line.
+        //
+        // We rebuild per-line text here (same 4pt y-grouping the main parser uses)
+        // so we can match against the barangay line alone.
+        {
+          const lineMap = [];
+          for (const item of tc.items) {
+            const txt = item.str.trim();
+            if (!txt) continue;
+            const iy = item.transform ? item.transform[5] : 0;
+            const existing = lineMap.find(l => Math.abs(l.y - iy) < 4);
+            if (existing) existing.text += ' ' + txt;
+            else lineMap.push({ y: iy, text: txt });
+          }
+          for (const ln of lineMap) {
+            const barMatch = ln.text.match(/BARANGAY\s*:\s*(.+)/i);
+            if (barMatch) {
+              let rawBrgy = barMatch[1].trim()
+                .replace(/\./g, '')   // "B. F. HOMES" → "B  F  HOMES"
+                .replace(/\s+/g, ' ') // → "B F HOMES"
+                .trim();
+              // Title-case: "B F HOMES" → "B F Homes", "DON BOSCO" → "Don Bosco"
+              rawBrgy = rawBrgy.replace(/\b\w+/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+              // Canonical name map — maps every known COMELEC spelling variant to
+              // the consistent name used across the rest of the app.
+              const BARANGAY_MAP = {
+                'B F Homes':            'BF Homes',
+                'Bf Homes':             'BF Homes',
+                'B F  Homes':           'BF Homes',
+                'Don Bosco':            'Don Bosco',
+                'Don Galo':             'Don Galo',
+                'La Huerta':            'La Huerta',
+                'Baclaran':             'Baclaran',
+                'Marcelo Green':        'Marcelo Green',
+                'Merville':             'Merville',
+                'Moonwalk':             'Moonwalk',
+                'San Antonio':          'San Antonio',
+                'San Dionisio':         'San Dionisio',
+                'San Isidro':           'San Isidro',
+                'San Martin De Porres': 'San Martin De Porres',
+                'San Nicasio':          'San Nicasio',
+                'Santo Nino':           'Santo Niño',
+                'Sto Nino':             'Santo Niño',
+                'Sto Niño':             'Santo Niño',
+                'Sun Valley':           'Sun Valley',
+                'Tambo':                'Tambo',
+                'Vitalez':              'Vitalez',
+              };
+              currentBarangay = BARANGAY_MAP[rawBrgy] || rawBrgy;
+              break; // found it — stop scanning lines
+            }
+          }
         }
 
         // Parse voter rows — pass persisted barangay so pages without header still get it
@@ -2322,7 +2811,7 @@ function parsePageItems(items, precinct, barangay) {
   for (const l of lines) l.parts.sort((a, b) => a.x - b.x);
 
   // Skip header/footer patterns
-  const isSkippableLine = text => /^(Legend|A\s*-|B\s*-|C\s*-|NOTICE|Date:|Page\s+\d|Republic|COMMISSION|PROVINCE|CITY|BARANGAY|LIST OF|MAY|PCVL|No\.|Voter's|Prec\s*:)/.test(text);
+  const isSkippableLine = text => /^(Legend|A\s*-|B\s*-|C\s*-|NOTICE|Date:|Page\s+\d|Republic|COMMISSION|PROVINCE|CITY|BARANGAY|LIST OF|MAY|PCVL|No\.|Voter's|Prec\s*:|We CERTIFY|ELECTION REGISTRATION|BOARD OF ELECTION|Name and Signature|\(Member\)|\(Chairman\))/i.test(text);
 
   // Find where numeric voter rows start
   let startIdx = 0;
@@ -2353,10 +2842,12 @@ function parsePageItems(items, precinct, barangay) {
       flagIdx++;
     }
 
-    // Split remaining parts into name column (x < 320) and address column (x >= 320)
+    // Split remaining parts into name column (x < 370) and address column (x >= 370)
+    // Actual PDF layout: voter names end around x=250, addresses start at x=392.
+    // The old threshold of 320 was too low and could misclassify some name tokens.
     const dataParts = parts.slice(flagIdx);
-    const nameParts = dataParts.filter(p => p.x < 320);
-    const addrParts = dataParts.filter(p => p.x >= 320);
+    const nameParts = dataParts.filter(p => p.x < 370);
+    const addrParts = dataParts.filter(p => p.x >= 370);
 
     let name    = nameParts.map(p => p.text).join(' ').trim();
     let address = addrParts.map(p => p.text).join(' ').trim();
@@ -2373,9 +2864,9 @@ function parsePageItems(items, precinct, barangay) {
       if (/^\d+$/.test(nextFirst)) break;
       if (isSkippableLine(nextText)) { j++; continue; }
 
-      // It's a continuation — append based on x column
-      const contName = nextParts.filter(p => p.x < 320).map(p => p.text).join(' ').trim();
-      const contAddr = nextParts.filter(p => p.x >= 320).map(p => p.text).join(' ').trim();
+    // Also update continuation line column split to match new threshold
+    const contName = nextParts.filter(p => p.x < 370).map(p => p.text).join(' ').trim();
+    const contAddr = nextParts.filter(p => p.x >= 370).map(p => p.text).join(' ').trim();
       if (contName) name    += ' ' + contName;
       if (contAddr) address += ' ' + contAddr;
       j++;
@@ -2502,8 +2993,12 @@ function loadResumeJson(input) {
 
 
 // ── Make a stable dedup key from a voter record
+// Includes middlename so two different people who share a first name,
+// last name, and precinct (e.g. "DELA CRUZ, MARIA in 0470A") are not
+// wrongly treated as the same voter when their middle names differ.
 function voterDedupKey(r) {
-  return (r.lastname + '|' + r.firstname + '|' + r.precinct).toUpperCase().replace(/\s+/g, '');
+  return (r.lastname + '|' + r.firstname + '|' + (r.middlename || '') + '|' + r.precinct)
+    .toUpperCase().replace(/\s+/g, '');
 }
 
 async function doPdfImport() {
@@ -2632,7 +3127,19 @@ async function doPdfImport() {
       `${imported.toLocaleString()} imported${skipped > 0 ? `, ${skipped.toLocaleString()} duplicates skipped` : ''}`;
     btn.textContent = 'Import Complete ✓';
     showToast(`✓ ${imported.toLocaleString()} imported, ${skipped.toLocaleString()} duplicates skipped.`, 'success');
-    setTimeout(() => { clearPdfImport(); loadVoters(); }, 2500);
+    // Update meta per-barangay counts from the actually imported rows
+    const barangayDeltas = {};
+    for (const r of toImport.slice(0, imported)) {
+      if (r.barangay) barangayDeltas[r.barangay] = (barangayDeltas[r.barangay] || 0) + 1;
+    }
+    const inc = firebase.firestore.FieldValue.increment;
+    const metaUpdate = { totalVoters: inc(imported) };
+    for (const [b, count] of Object.entries(barangayDeltas)) {
+      metaUpdate[`barangayCounts.${b}`] = inc(count);
+    }
+    try { await db.collection('meta').doc('summary').set(metaUpdate, { merge: true }); } catch(e) { console.warn('meta update failed', e); }
+    _totalVoters += imported;
+    setTimeout(async () => { clearPdfImport(); currentPage = 1; _pageStack = []; _lastDoc = null; await _loadPage('first'); }, 2500);
 
   } catch (err) {
     document.getElementById('imp-bar').classList.add('error');
@@ -2705,8 +3212,7 @@ function renderMobileCards(voters, startIndex) {
   list.innerHTML = voters.map((v, i) => {
     const num = startIndex + i + 1;
     const initials = ((v.lastname || '').charAt(0) + (v.firstname || '').charAt(0)).toUpperCase() || '#';
-    const missingPhone = !v.phone && !v.phone2;
-    return `<div class="voter-card" onclick="openVoterModal('${escHtml(v.id)}')">
+    return `<div class="voter-card" data-voter-id="${escHtml(v.id)}">
       <div class="voter-card-avatar">${escHtml(initials)}</div>
       <div class="voter-card-body">
         <div class="voter-card-name">${escHtml(v.name || '—')}</div>
@@ -2715,7 +3221,6 @@ function renderMobileCards(voters, startIndex) {
           ${v.barangay ? `<span class="voter-card-tag accent">${escHtml(v.barangay)}</span>` : ''}
           ${v.precinct ? `<span class="voter-card-tag">${escHtml(v.precinct)}</span>` : ''}
           ${v.phone ? `<span class="voter-card-tag">${escHtml(v.phone)}</span>` : ''}
-          ${missingPhone ? `<span class="voter-card-tag" style="background:var(--warn-bg);color:var(--warn)">📵 No Phone</span>` : ''}
         </div>
       </div>
       <div class="voter-card-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
@@ -2734,23 +3239,42 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isSignedIn() { return request.auth != null; }
-    function getUserData() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
-    function isAdmin() { return isSignedIn() && getUserData().role == 'admin'; }
-    function isOfficial() { return isSignedIn() && getUserData().role == 'official'; }
-    function ownsBarangay(barangay) { return isOfficial() && getUserData().barangay == barangay; }
+    function userData() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function isAdmin() { return isSignedIn() && userData().role == 'admin'; }
+    function isOfficial() { return isSignedIn() && userData().role == 'official'; }
+
+    // Check if official's barangay matches a voter's barangay (null = all barangays)
+    function canReadBarangay(barangay) {
+      return isAdmin()
+        || (isOfficial() && (userData().barangay == null || userData().barangay == barangay));
+    }
+
+    // Check a named permission in the user's permissions map
+    function hasPerm(key) {
+      return isAdmin() || (isOfficial() && userData().permissions[key] == true);
+    }
 
     match /voters/{voterId} {
-      allow read:   if isAdmin() || ownsBarangay(resource.data.barangay) || (isOfficial() && getUserData().barangay == null);
-      allow create: if isAdmin() || isOfficial();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow read:   if canReadBarangay(resource.data.barangay);
+      allow create: if hasPerm('addVoters') || hasPerm('bulkImport');
+      allow update: if hasPerm('editVoters')
+                    || (hasPerm('govAid')
+                        && canReadBarangay(resource.data.barangay)
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['govAid']));
+      allow delete: if hasPerm('deleteVoters');
     }
+
     match /users/{uid} {
-      allow read:   if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if isAdmin();
-      allow update: if isAdmin() || request.auth.uid == uid;
+      allow read:   if isSignedIn() && (request.auth.uid == uid || isAdmin() || hasPerm('viewTeam'));
+      allow create: if isAdmin()
+                    || (isSignedIn() && request.auth.uid == uid
+                        && !exists(/databases/$(database)/documents/users/$(uid)));
+      allow update: if isAdmin()
+                    || (isSignedIn() && request.auth.uid == uid
+                        && request.resource.data.role == resource.data.role);
       allow delete: if isAdmin();
     }
+
     match /audit_logs/{logId} {
       allow read:   if isAdmin();
       allow create: if isSignedIn();
